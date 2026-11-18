@@ -1,6 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
+const https = require('node:https');
+const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { spawn, execFileSync } = require('node:child_process');
 
@@ -1886,9 +1888,249 @@ function createAutoBackup() {
   return targetDir;
 }
 
-function checkRepoUpdates() {
+const GITHUB_OWNER = 'masturbek-lgbtq';
+const GITHUB_REPO = 'HelpTool';
+const APP_VERSION_FILE = path.join(__dirname, '.app-version.json');
+
+function fetchGithubBuffer(urlStr, timeoutMs = 15000, redirects = 0) {
+  return new Promise((resolve, reject) => {
+    if (redirects > 3) {
+      reject(new Error('Слишком много перенаправлений'));
+      return;
+    }
+    let parsed;
+    try {
+      parsed = new URL(urlStr);
+    } catch {
+      reject(new Error('Некорректный адрес обновления'));
+      return;
+    }
+    const allowedHosts = ['api.github.com', 'raw.githubusercontent.com'];
+    if (parsed.protocol !== 'https:' || !allowedHosts.includes(parsed.hostname)) {
+      reject(new Error('Недопустимый источник загрузки'));
+      return;
+    }
+    const req = https.get(
+      parsed,
+      {
+        timeout: timeoutMs,
+        headers: {
+          'User-Agent': 'HelpTool-Updater/2.1',
+          Accept: parsed.hostname === 'api.github.com' ? 'application/vnd.github+json' : '*/*',
+        },
+      },
+      (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          res.resume();
+          const nextUrl = new URL(res.headers.location, parsed).toString();
+          fetchGithubBuffer(nextUrl, timeoutMs, redirects + 1).then(resolve, reject);
+          return;
+        }
+        if (res.statusCode !== 200) {
+          res.resume();
+          reject(new Error(`GitHub HTTP ${res.statusCode}`));
+          return;
+        }
+        const chunks = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => resolve(Buffer.concat(chunks)));
+      }
+    );
+    req.on('timeout', () => {
+      req.destroy(new Error('Превышено время ожидания GitHub'));
+    });
+    req.on('error', reject);
+  });
+}
+
+async function fetchGithubJson(urlStr, timeoutMs = 10000) {
+  const buf = await fetchGithubBuffer(urlStr, timeoutMs);
+  return JSON.parse(buf.toString('utf8'));
+}
+
+function readLocalAppVersion() {
+  try {
+    if (!fs.existsSync(APP_VERSION_FILE)) return { commitSha: '', fileShas: {} };
+    const parsed = JSON.parse(fs.readFileSync(APP_VERSION_FILE, 'utf8'));
+    return {
+      commitSha: typeof parsed.commitSha === 'string' ? parsed.commitSha.trim() : '',
+      fileShas: parsed.fileShas && typeof parsed.fileShas === 'object' ? parsed.fileShas : {},
+    };
+  } catch {
+    return { commitSha: '', fileShas: {} };
+  }
+}
+
+function writeLocalAppVersion(data) {
+  fs.writeFileSync(APP_VERSION_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function isAllowedAppUpdatePath(relPath) {
+  if (!relPath || typeof relPath !== 'string') return false;
+  if (relPath.includes('..') || relPath.includes('\\') || relPath.startsWith('/')) return false;
+  return (
+    /^(bot\.js|db\.js|parser\.js|package\.json|start-bot\.vbs|status-bot\.cmd|stop-bot\.cmd|app\.ico|joker-noir\.ico|joker-noir-v2\.ico)$/.test(
+      relPath
+    ) ||
+    relPath === 'public/index.html' ||
+    relPath === 'public/joker-icon-256.png' ||
+    /^public\/gallery\/[a-zA-Z0-9._-]+$/.test(relPath)
+  );
+}
+
+async function checkGithubDirectUpdates() {
+  try {
+    const commit = await fetchGithubJson(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/commits/main`,
+      10000
+    );
+    const remoteSha = String(commit.sha || '').trim();
+    if (!/^[a-f0-9]{40}$/.test(remoteSha)) {
+      return { ok: false, error: 'Некорректный ответ от GitHub' };
+    }
+    const localVer = readLocalAppVersion();
+    const hasUpdate = localVer.commitSha !== remoteSha;
+    const latestMsg = String(commit.commit?.message || '').split('\n')[0].trim();
+    return {
+      ok: true,
+      mode: 'github',
+      hasUpdate,
+      behindCount: hasUpdate ? 1 : 0,
+      localHash: localVer.commitSha ? localVer.commitSha.slice(0, 7) : 'сборка',
+      remoteHash: remoteSha.slice(0, 7),
+      remoteSha,
+      latestMsg,
+    };
+  } catch (err) {
+    const isPrivate404 = /404/.test(String(err.message || ''));
+    return {
+      ok: true,
+      mode: 'offline',
+      hasUpdate: false,
+      behindCount: 0,
+      warn: isPrivate404
+        ? 'Репозиторий обновлений закрыт (HTTP 404) — данные экрана обновлены'
+        : 'Не удалось связаться с GitHub — проверяю локально',
+      detail: err.message,
+    };
+  }
+}
+
+async function applyGithubDirectUpdate() {
+  const check = await checkGithubDirectUpdates();
+  if (!check.ok) return check;
+  if (check.mode === 'offline') {
+    return { ok: false, error: check.warn || 'Нет подключения к GitHub' };
+  }
+  if (!check.hasUpdate) {
+    return { ok: true, mode: 'reload', message: 'Уже установлена актуальная версия' };
+  }
+
+  const remoteSha = check.remoteSha;
+  let treeData;
+  try {
+    treeData = await fetchGithubJson(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/trees/${remoteSha}?recursive=1`,
+      12000
+    );
+  } catch (err) {
+    return { ok: false, error: `Не удалось получить список файлов с GitHub: ${err.message}` };
+  }
+
+  const entries = Array.isArray(treeData.tree)
+    ? treeData.tree.filter((t) => t.type === 'blob' && isAllowedAppUpdatePath(t.path))
+    : [];
+  if (!entries.length) {
+    return { ok: false, error: 'Список файлов обновления пуст' };
+  }
+
+  const localVer = readLocalAppVersion();
+  const nextFileShas = { ...(localVer.fileShas || {}) };
+  const toDownload = entries.filter((entry) => {
+    const absPath = path.join(__dirname, entry.path);
+    const existsLocally = fs.existsSync(absPath);
+    return !existsLocally || nextFileShas[entry.path] !== entry.sha;
+  });
+
+  const downloaded = [];
+  for (const entry of toDownload) {
+    const encodedPath = entry.path.split('/').map(encodeURIComponent).join('/');
+    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${remoteSha}/${encodedPath}`;
+    let buf;
+    try {
+      buf = await fetchGithubBuffer(rawUrl, 15000);
+    } catch (err) {
+      return { ok: false, error: `Не удалось скачать ${entry.path}: ${err.message}` };
+    }
+    if (!buf || buf.length === 0) {
+      return { ok: false, error: `Пустой файл при загрузке: ${entry.path}` };
+    }
+    if (/\.js$/i.test(entry.path)) {
+      try {
+        new vm.Script(buf.toString('utf8'), { filename: entry.path });
+      } catch (syntaxErr) {
+        return { ok: false, error: `Ошибка проверки ${entry.path}: ${syntaxErr.message}` };
+      }
+    }
+    if (entry.path === 'public/index.html') {
+      const txt = buf.toString('utf8');
+      if (!txt.includes('<!DOCTYPE html>') || !txt.includes('</html>') || !txt.includes('</script>')) {
+        return { ok: false, error: 'Скачанный public/index.html повреждён' };
+      }
+    }
+    downloaded.push({ relPath: entry.path, sha: entry.sha, buf });
+  }
+
+  let backupDir = '';
+  try {
+    backupDir = createAutoBackup();
+    for (const rel of ['bot.js', 'db.js', 'parser.js', 'public/index.html']) {
+      const src = path.join(__dirname, rel);
+      if (fs.existsSync(src)) {
+        const dest = path.join(backupDir, 'code', rel);
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.copyFileSync(src, dest);
+      }
+    }
+  } catch (err) {
+    return { ok: false, error: `Не удалось создать резервную копию: ${err.message}` };
+  }
+
+  const rootResolved = path.resolve(__dirname) + path.sep;
+  let jsChanged = false;
+  try {
+    for (const file of downloaded) {
+      const targetPath = path.resolve(__dirname, file.relPath);
+      if (!targetPath.startsWith(rootResolved)) {
+        throw new Error(`Недопустимый путь: ${file.relPath}`);
+      }
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.writeFileSync(targetPath, file.buf);
+      nextFileShas[file.relPath] = file.sha;
+      if (/^(bot|db|parser)\.js$/i.test(file.relPath)) jsChanged = true;
+    }
+    writeLocalAppVersion({
+      commitSha: remoteSha,
+      fileShas: nextFileShas,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return { ok: false, error: `Ошибка записи обновления: ${err.message}` };
+  }
+
+  return {
+    ok: true,
+    mode: jsChanged ? 'restart_server' : 'reload',
+    backupDir,
+    updatedFiles: downloaded.length,
+    remoteHash: check.remoteHash,
+    message: check.latestMsg || 'Обновление установлено',
+  };
+}
+
+async function checkRepoUpdates() {
   if (!fs.existsSync(path.join(__dirname, '.git'))) {
-    return { ok: true, mode: 'no_git', hasUpdate: false, behindCount: 0, message: '' };
+    return await checkGithubDirectUpdates();
   }
   try {
     const originUrl = runGitSync(['remote', 'get-url', 'origin'], 4000);
@@ -1916,12 +2158,15 @@ function checkRepoUpdates() {
       needsExeRestart,
     };
   } catch (err) {
+    const isPrivate404 = /404/.test(String(err.message || ''));
     return {
       ok: true,
       mode: 'offline',
       hasUpdate: false,
       behindCount: 0,
-      warn: 'Не удалось связаться с GitHub — проверяю локально',
+      warn: isPrivate404
+        ? 'Репозиторий обновлений закрыт (HTTP 404) — данные экрана обновлены'
+        : 'Не удалось связаться с GitHub — проверяю локально',
       detail: err.message,
     };
   }
@@ -1944,8 +2189,11 @@ function restartBotViaVbs() {
   }
 }
 
-function applyRepoUpdate() {
-  const check = checkRepoUpdates();
+async function applyRepoUpdate() {
+  if (!fs.existsSync(path.join(__dirname, '.git'))) {
+    return await applyGithubDirectUpdate();
+  }
+  const check = await checkRepoUpdates();
   if (!check.ok) return check;
   if (!check.hasUpdate) {
     return { ok: true, mode: 'reload', message: 'Уже установлена актуальная версия' };
@@ -2081,7 +2329,9 @@ function startWebServer() {
         const html = fs.readFileSync(indexHtmlPath, 'utf8');
         res.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'no-store',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          Pragma: 'no-cache',
+          Expires: '0',
         });
         res.end(html);
         return;
@@ -2399,13 +2649,13 @@ function startWebServer() {
           }
 
           if (pathname === '/api/update/check') {
-            const info = checkRepoUpdates();
+            const info = await checkRepoUpdates();
             sendJson(res, 200, info);
             return;
           }
 
           if (pathname === '/api/update/apply') {
-            const result = applyRepoUpdate();
+            const result = await applyRepoUpdate();
             sendJson(res, 200, result);
             if (result.ok && result.mode === 'restart_server') {
               setTimeout(() => restartBotViaVbs(), 200);

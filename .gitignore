@@ -8,6 +8,7 @@ tunnel.json
 bot.log
 bot.pid
 backups/
+.app-version.json
 
 # Тяжёлые служебные бинарники (кладутся в раздел Releases)
 bin/node.exe
