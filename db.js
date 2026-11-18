@@ -139,6 +139,8 @@ const DEFAULT_SETTINGS = {
   last_cleanup_date: '',
   last_morning_digest_date: '',
   last_evening_habits_date: '',
+  sound_enabled: '1',
+  fx_enabled: '1',
   bot_token: '',
   gemini_api_key: '',
 };

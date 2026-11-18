@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 const crypto = require('node:crypto');
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 
 const {
   DAY_NAMES_FULL,
@@ -1833,6 +1833,193 @@ async function runSchedulerTick() {
 
 // ================= ВЕБ-СЕРВЕР И API ДЛЯ ЭКРАНА MINI APP =================
 
+function isLoopbackClient(req) {
+  const host = String(req.headers.host || '').toLowerCase();
+  const hostOk = host.startsWith('127.0.0.1') || host.startsWith('localhost');
+  const remote = String(req.socket?.remoteAddress || '');
+  const ipOk = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+  const viaProxy = Boolean(
+    req.headers['cf-ray'] ||
+    req.headers['cf-connecting-ip'] ||
+    req.headers['x-forwarded-for']
+  );
+  return hostOk && ipOk && !viaProxy;
+}
+
+function runGitSync(args, timeoutMs = 12000) {
+  return execFileSync('git', args, {
+    cwd: __dirname,
+    encoding: 'utf8',
+    timeout: timeoutMs,
+    windowsHide: true,
+    env: {
+      ...process.env,
+      GCM_INTERACTIVE: 'never',
+      GIT_TERMINAL_PROMPT: '0',
+    },
+  }).trim();
+}
+
+function createAutoBackup() {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupsRoot = path.join(__dirname, 'backups');
+  const targetDir = path.join(backupsRoot, `before-update-${stamp}`);
+  fs.mkdirSync(targetDir, { recursive: true });
+  for (const name of ['assistant.db', 'assistant.db-wal', 'assistant.db-shm', '.env', 'tunnel.json']) {
+    const src = path.join(__dirname, name);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(targetDir, name));
+    }
+  }
+  // Оставляем только 5 последних автобэкапов
+  try {
+    const dirs = fs
+      .readdirSync(backupsRoot, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && d.name.startsWith('before-update-'))
+      .map((d) => d.name)
+      .sort()
+      .reverse();
+    for (const oldDir of dirs.slice(5)) {
+      fs.rmSync(path.join(backupsRoot, oldDir), { recursive: true, force: true });
+    }
+  } catch {}
+  return targetDir;
+}
+
+function checkRepoUpdates() {
+  if (!fs.existsSync(path.join(__dirname, '.git'))) {
+    return { ok: true, mode: 'no_git', hasUpdate: false, behindCount: 0, message: '' };
+  }
+  try {
+    const originUrl = runGitSync(['remote', 'get-url', 'origin'], 4000);
+    if (!/github\.com[:/]masturbek-lgbtq\/HelpTool(?:\.git)?$/i.test(originUrl)) {
+      return { ok: false, error: 'Неподтверждённый источник обновлений' };
+    }
+    runGitSync(['fetch', 'origin', 'main', '--quiet'], 12000);
+    const behind = parseInt(runGitSync(['rev-list', 'HEAD..origin/main', '--count'], 4000), 10) || 0;
+    const localHash = runGitSync(['rev-parse', '--short', 'HEAD'], 4000);
+    const remoteHash = runGitSync(['rev-parse', '--short', 'origin/main'], 4000);
+    const latestMsg = behind > 0 ? runGitSync(['log', '-1', '--pretty=%s', 'origin/main'], 4000) : '';
+    const changedFiles =
+      behind > 0
+        ? runGitSync(['diff', '--name-only', 'HEAD..origin/main'], 4000).split(/\r?\n/).filter(Boolean)
+        : [];
+    const needsExeRestart = changedFiles.some((f) => /\.(exe|dll)$/i.test(f));
+    return {
+      ok: true,
+      mode: 'git',
+      hasUpdate: behind > 0,
+      behindCount: behind,
+      localHash,
+      remoteHash,
+      latestMsg,
+      needsExeRestart,
+    };
+  } catch (err) {
+    return {
+      ok: true,
+      mode: 'offline',
+      hasUpdate: false,
+      behindCount: 0,
+      warn: 'Не удалось связаться с GitHub — проверяю локально',
+      detail: err.message,
+    };
+  }
+}
+
+function restartBotViaVbs() {
+  try {
+    const vbsPath = path.join(__dirname, 'start-bot.vbs');
+    if (fs.existsSync(vbsPath)) {
+      const child = spawn('wscript.exe', ['//B', vbsPath], {
+        cwd: __dirname,
+        detached: true,
+        windowsHide: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+    }
+  } catch (err) {
+    console.error('[restartBotViaVbs]', err.message);
+  }
+}
+
+function applyRepoUpdate() {
+  const check = checkRepoUpdates();
+  if (!check.ok) return check;
+  if (!check.hasUpdate) {
+    return { ok: true, mode: 'reload', message: 'Уже установлена актуальная версия' };
+  }
+
+  let backupDir = '';
+  try {
+    backupDir = createAutoBackup();
+  } catch (err) {
+    return { ok: false, error: `Не удалось создать резервную копию: ${err.message}` };
+  }
+
+  try {
+    const dirty = runGitSync(['status', '--porcelain'], 4000);
+    if (dirty) {
+      return {
+        ok: false,
+        error: 'В рабочей папке есть несохранённые правки — обновление отменено ради безопасности',
+      };
+    }
+
+    const changedFiles = runGitSync(['diff', '--name-only', 'HEAD..origin/main'], 4000)
+      .split(/\r?\n/)
+      .filter(Boolean);
+    const hasBinaryChanges = changedFiles.some((f) => /\.(exe|dll)$/i.test(f));
+
+    if (hasBinaryChanges) {
+      const backupsRoot = path.join(__dirname, 'backups');
+      const psScript = path.join(backupsRoot, 'apply-exe-update.ps1');
+      const scriptBody = [
+        'Start-Sleep -Milliseconds 700',
+        'Get-Process -Name "Помощник" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue',
+        '$pidFile = Join-Path $PSScriptRoot "..\\bot.pid"',
+        'if (Test-Path $pidFile) {',
+        '  $oldPid = (Get-Content $pidFile -ErrorAction SilentlyContinue | Select-Object -First 1).Trim()',
+        '  if ($oldPid) { Stop-Process -Id ([int]$oldPid) -Force -ErrorAction SilentlyContinue }',
+        '}',
+        'Start-Sleep -Milliseconds 600',
+        'Set-Location (Join-Path $PSScriptRoot "..")',
+        '$env:GCM_INTERACTIVE = "never"',
+        '$env:GIT_TERMINAL_PROMPT = "0"',
+        'git merge --ff-only origin/main',
+        '$exePath = Join-Path (Get-Location) "Помощник.exe"',
+        'if (Test-Path $exePath) { Start-Process -FilePath $exePath }',
+      ].join('\r\n');
+      fs.writeFileSync(psScript, '\uFEFF' + scriptBody, 'utf8');
+      const child = spawn(
+        'powershell.exe',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', psScript],
+        { cwd: __dirname, detached: true, windowsHide: true, stdio: 'ignore' }
+      );
+      child.unref();
+      return {
+        ok: true,
+        mode: 'restart_app',
+        backupDir,
+        message: 'Перезапускаю приложение для установки обновления',
+      };
+    }
+
+    runGitSync(['merge', '--ff-only', 'origin/main'], 12000);
+    const jsChanged = changedFiles.some((f) => /^(bot|db|parser)\.js$/i.test(f));
+    return {
+      ok: true,
+      mode: jsChanged ? 'restart_server' : 'reload',
+      backupDir,
+      remoteHash: check.remoteHash,
+      message: check.latestMsg || 'Обновление установлено',
+    };
+  } catch (err) {
+    return { ok: false, error: `Ошибка применения обновления: ${err.message}` };
+  }
+}
+
 function verifyWebRequest(req, parsedUrl) {
   const host = String(req.headers.host || '');
   if (host.startsWith('127.0.0.1') || host.startsWith('localhost')) {
@@ -2179,6 +2366,8 @@ function startWebServer() {
             'evening_habits_enabled',
             'evening_habits_time',
             'week_cycle_mode',
+            'sound_enabled',
+            'fx_enabled',
             'bot_token',
             'gemini_api_key',
           ];
@@ -2200,6 +2389,35 @@ function startWebServer() {
           }
           sendJson(res, 200, { ok: true, telegram });
           return;
+        }
+
+        // Безопасное автообновление (строго локально 127.0.0.1, никогда извне)
+        if (pathname.startsWith('/api/update/')) {
+          if (!isLoopbackClient(req)) {
+            sendJson(res, 403, { error: 'Обновление разрешено только локально с компьютера' });
+            return;
+          }
+
+          if (pathname === '/api/update/check') {
+            const info = checkRepoUpdates();
+            sendJson(res, 200, info);
+            return;
+          }
+
+          if (pathname === '/api/update/apply') {
+            const result = applyRepoUpdate();
+            sendJson(res, 200, result);
+            if (result.ok && result.mode === 'restart_server') {
+              setTimeout(() => restartBotViaVbs(), 200);
+            }
+            return;
+          }
+
+          if (pathname === '/api/update/restart-local') {
+            sendJson(res, 200, { ok: true, mode: 'restart_server' });
+            setTimeout(() => restartBotViaVbs(), 200);
+            return;
+          }
         }
 
         sendJson(res, 404, { error: 'Маршрут не найден' });

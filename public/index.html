@@ -120,11 +120,17 @@
       border: 1px solid var(--glass-border);
       background: var(--surface);
       cursor: pointer;
-      transition: transform 0.15s ease, border-color 0.15s ease;
+      transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.3s ease;
     }
 
     .anime-card:hover {
       border-color: var(--accent);
+    }
+
+    .anime-card.reacting {
+      transform: translateY(-2px) scale(1.015);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft), 0 10px 26px var(--accent-soft);
     }
 
     .anime-card.hidden-art .anime-poster {
@@ -145,6 +151,36 @@
       object-fit: cover;
       object-position: 50% 18%;
       display: block;
+      transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.06);
+      will-change: transform;
+      animation: artBreath 7.5s ease-in-out infinite;
+    }
+
+    body.no-fx .anime-poster img {
+      animation: none;
+      transform: none;
+    }
+
+    @keyframes artBreath {
+      0%, 100% {
+        transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.045);
+      }
+      50% {
+        transform: translate3d(var(--px, 0px), calc(var(--py, 0px) - 2px), 0) scale(1.075);
+      }
+    }
+
+    .fx-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body.no-fx .fx-canvas {
+      display: none;
     }
 
     .anime-poster-fallback {
@@ -351,7 +387,7 @@
     .top-quote {
       flex: 1 1 260px;
       min-width: 0;
-      padding: 7px 13px;
+      padding: 7px 12px;
       border-radius: 12px;
       background: var(--surface-glass);
       backdrop-filter: blur(14px);
@@ -360,14 +396,99 @@
       border-left: 3px solid var(--accent);
       cursor: pointer;
       display: flex;
-      flex-direction: column;
-      gap: 2px;
+      flex-direction: row;
+      align-items: center;
+      gap: 11px;
       user-select: none;
-      transition: border-color 0.15s ease, background 0.15s ease;
+      transition: border-color 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease;
     }
 
     .top-quote:hover {
       border-color: var(--accent);
+    }
+
+    .top-quote.reacting {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+      transform: translateY(-1px);
+    }
+
+    .chibi-wrap {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      background: var(--accent-soft);
+      border: 1px solid var(--glass-border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .chibi-wrap svg {
+      width: 38px;
+      height: 38px;
+      display: block;
+    }
+
+    .chibi-hair-sway {
+      transform-origin: 20px 10px;
+      animation: hairSway 4.2s ease-in-out infinite;
+    }
+
+    .chibi-ear-sway {
+      transform-origin: 20px 12px;
+      animation: earTwitch 5.2s ease-in-out infinite;
+    }
+
+    .chibi-eyes-blink {
+      transform-origin: 20px 21px;
+      animation: chibiBlink 4.1s infinite;
+    }
+
+    .chibi-wrap.happy {
+      animation: chibiBounce 0.55s ease;
+    }
+
+    .chibi-wrap.sleepy .chibi-eyes-blink {
+      animation: none;
+      transform: scaleY(0.45);
+    }
+
+    body.no-fx .chibi-hair-sway,
+    body.no-fx .chibi-ear-sway,
+    body.no-fx .chibi-eyes-blink {
+      animation: none;
+    }
+
+    @keyframes hairSway {
+      0%, 100% { transform: rotate(-1.6deg); }
+      50% { transform: rotate(1.8deg); }
+    }
+
+    @keyframes earTwitch {
+      0%, 84%, 100% { transform: rotate(0deg); }
+      88% { transform: rotate(-3.2deg); }
+      92% { transform: rotate(2.5deg); }
+    }
+
+    @keyframes chibiBlink {
+      0%, 44%, 48%, 92%, 96%, 100% { transform: scaleY(1); }
+      46%, 94% { transform: scaleY(0.08); }
+    }
+
+    @keyframes chibiBounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      40% { transform: translateY(-3px) scale(1.06); }
+    }
+
+    .top-quote-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
     .top-quote-head {
@@ -399,6 +520,91 @@
       color: var(--text);
       line-height: 1.35;
       word-break: break-word;
+    }
+
+    .icon-pill {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 1px solid var(--glass-border);
+      background: var(--surface-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s, transform 0.2s;
+    }
+
+    .icon-pill:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .icon-pill.spinning {
+      animation: spin360 0.8s linear infinite;
+      color: var(--accent);
+    }
+
+    @keyframes spin360 {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .focus-pill {
+      display: none;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .focus-pill.active {
+      display: inline-flex;
+    }
+
+    .focus-pill-title {
+      font-family: var(--font-sans);
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .focus-ctrl {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 1px 3px;
+      line-height: 1;
+    }
+
+    .focus-ctrl:hover {
+      color: var(--text);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .anime-poster img,
+      .chibi-hair-sway,
+      .chibi-ear-sway,
+      .chibi-eyes-blink {
+        animation: none !important;
+      }
     }
 
     .top-title {
@@ -1394,7 +1600,8 @@
         gap: 8px;
       }
       .topbar .top-title,
-      .topbar .theme-stepper {
+      .topbar .theme-stepper,
+      .topbar #btnAppUpdate {
         display: none;
       }
       .top-quote {
@@ -1425,6 +1632,7 @@
 <body>
   <div class="bg-watermark" id="bgWatermark"></div>
   <div class="bg-scrim" id="bgScrim"></div>
+  <canvas class="fx-canvas" id="fxCanvas"></canvas>
 
   <div class="shell">
     <!-- БОКОВОЕ МЕНЮ (ПК) -->
@@ -1489,6 +1697,7 @@
         </div>
         <div class="mob-actions">
           <button class="btn" style="padding:5px 9px;" onclick="openStudio('themes')">✦ Темы</button>
+          <button class="btn" id="btnMobAppUpdate" style="padding:5px 9px;" onclick="handleUpdateClick()" title="Обновить приложение">↻</button>
           <button class="btn" style="padding:5px 9px;" onclick="openStudio('settings')">⚙</button>
         </div>
       </header>
@@ -1500,19 +1709,29 @@
           <div class="top-sub" id="hdrSub">Загрузка...</div>
         </div>
         <div class="top-quote" id="heroQuote" onclick="cycleHeroQuote()" title="Нажмите для следующей реплики персонажа">
-          <div class="top-quote-head">
-            <span class="top-quote-author" id="heroQuoteAuthor">Персонаж</span>
-            <span class="top-quote-hint" id="heroQuoteCount">1/1</span>
+          <div class="chibi-wrap" id="chibiWrap"></div>
+          <div class="top-quote-content">
+            <div class="top-quote-head">
+              <span class="top-quote-author" id="heroQuoteAuthor">Персонаж</span>
+              <span class="top-quote-hint" id="heroQuoteCount">1/1</span>
+            </div>
+            <div class="top-quote-text" id="heroQuoteText"></div>
           </div>
-          <div class="top-quote-text" id="heroQuoteText"></div>
         </div>
         <div class="top-actions">
+          <div class="focus-pill" id="focusPill">
+            <span id="focusClock">25:00</span>
+            <span class="focus-pill-title" id="focusTaskLabel">Фокус</span>
+            <button class="focus-ctrl" id="focusPauseBtn" onclick="toggleFocusPause()" title="Пауза / продолжить">❚❚</button>
+            <button class="focus-ctrl" onclick="stopFocusTimer()" title="Закрыть таймер">×</button>
+          </div>
           <div class="theme-stepper">
             <button class="stepper-arrow" onclick="stepSkin(-1)" title="Предыдущая тема">◀</button>
             <button class="stepper-label" onclick="openStudio('themes')" id="topSkinBtn">Тема</button>
             <button class="stepper-arrow" onclick="stepSkin(1)" title="Следующая тема">▶</button>
           </div>
-          <button class="pill-btn primary" onclick="toggleQuickDrawer()">+ Быстро добавить</button>
+          <button class="pill-btn primary" onclick="toggleQuickDrawer()" title="Быстро добавить (Ctrl+K)">+ Быстро добавить</button>
+          <button class="icon-pill" id="btnAppUpdate" onclick="handleUpdateClick()" title="Проверить обновление или перезагрузить">↻</button>
         </div>
       </div>
 
@@ -1921,6 +2140,27 @@
               <span class="tweak-sub">Отключает все уведомления и замораживает серии привычек</span>
             </div>
             <button class="btn" id="stPauseAllBtn" onclick="toggleSetting('pause_all')">Выкл</button>
+          </div>
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Анимация и частицы</span>
+              <span class="tweak-sub">Дыхание арта, параллакс, моргание мини-чибика и эффекты тем</span>
+            </div>
+            <button class="btn btn-primary" id="stFxBtn" onclick="toggleSetting('fx_enabled')">● Вкл</button>
+          </div>
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Микро-звуки интерфейса</span>
+              <span class="tweak-sub">Тихие отклики при закрытии заданий, привычек и таймера фокуса</span>
+            </div>
+            <button class="btn btn-primary" id="stSoundBtn" onclick="toggleSetting('sound_enabled')">● Вкл</button>
+          </div>
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Обновление программы</span>
+              <span class="tweak-sub">Проверка с GitHub с резервной копией базы (только с ПК)</span>
+            </div>
+            <button class="btn" onclick="closeStudio(); handleUpdateClick();">↻ Проверить</button>
           </div>
         </div>
 
@@ -2478,6 +2718,198 @@
       renderStudioThemes();
     }
 
+    const CHIBI_THEMES = {
+      'goth-skull':         { hair: '#1d1c24', hairDark: '#0f0e14', eye: '#e11d74', style: 'twintails', glasses: true, acc: '#ffffff' },
+      'ellen-zzz':          { hair: '#181820', hairDark: '#0c0c12', eye: '#ff2e63', style: 'bob', shark: true, acc: '#ff2e63' },
+      'yumeko-kakegurui':   { hair: '#14111b', hairDark: '#09070d', eye: '#e11d48', style: 'long', ribbon: '#e11d48' },
+      'terrorblade-sakura': { hair: '#271e22', hairDark: '#161012', eye: '#d9385e', style: 'long', acc: '#f472b6' },
+      'vergil-yamato':      { hair: '#d8e2ef', hairDark: '#94a3b8', eye: '#38bdf8', style: 'spiky', acc: '#38bdf8' },
+      'cc-code-geass':      { hair: '#84cc16', hairDark: '#4d7c0f', eye: '#f59e0b', style: 'long', acc: '#bef264' },
+      'gothic-miku-feathers':{ hair: '#2dd4bf', hairDark: '#0f766e', eye: '#2dd4bf', style: 'twintails', acc: '#e2e8f0' },
+      'cyber-rave-miku':    { hair: '#22d3ee', hairDark: '#0e7490', eye: '#ec4899', style: 'twintails', acc: '#ec4899' },
+      'chocola-maid':       { hair: '#5c3c31', hairDark: '#3b241c', eye: '#e11d74', style: 'neko', acc: '#f9a8d4' },
+      'pink-demon-lolita':  { hair: '#f472b6', hairDark: '#be185d', eye: '#f472b6', style: 'demon', acc: '#c084fc' },
+      'night-neko-stripes': { hair: '#1c1829', hairDark: '#0d0b14', eye: '#ec4899', style: 'neko', acc: '#ec4899' },
+      'pink-poker-cards':   { hair: '#2a1830', hairDark: '#150b18', eye: '#f472b6', style: 'bob', ribbon: '#f472b6' },
+      'marston-acid-western':{ hair: '#3b2d22', hairDark: '#201812', eye: '#22c55e', style: 'spiky', acc: '#facc15' },
+      'mechagenda-biomech': { hair: '#4b5548', hairDark: '#262b24', eye: '#a3b18a', style: 'spiky', acc: '#d97706' },
+      'joker-noir':         { hair: '#222226', hairDark: '#111114', eye: '#e4e4e7', style: 'spiky', acc: '#ffffff' },
+      'strict-minimal':     { hair: '#27272a', hairDark: '#18181b', eye: '#18181b', style: 'bob', acc: '#71717a' },
+    };
+
+    function getTimeSlot() {
+      const h = new Date().getHours();
+      if (h >= 6 && h < 12) return 'morning';
+      if (h >= 12 && h < 18) return 'day';
+      if (h >= 18 && h < 23) return 'evening';
+      return 'night';
+    }
+
+    function getTimeGreeting(skin) {
+      const slot = getTimeSlot();
+      const first = (skin.quotes && skin.quotes[0]) || '';
+      if (slot === 'morning') {
+        if (skin.id === 'ellen-zzz') return 'Доброе утро… ещё бы поспать, но сначала закроем уроки и задания дня.';
+        if (skin.id === 'vergil-yamato') return 'Утро началось. Собери волю и закрой первую задачу дня.';
+        if (skin.id === 'chocola-maid') return 'Доброе утро! Расписание на сегодня уже готово, хорошего тебе дня!';
+        return `Доброе утро! ${first}`;
+      }
+      if (slot === 'evening') {
+        if (skin.id === 'night-neko-stripes') return 'Уже темнеет — самое время дожать дневные дела и отметить привычки.';
+        if (skin.id === 'ellen-zzz') return 'Вечер близко. Проверь оставшиеся задания, чтобы спокойно отдыхать.';
+        return `Добрый вечер! Не забудь отметить привычки за сегодня и проверить задания.`;
+      }
+      if (slot === 'night') {
+        if (skin.id === 'night-neko-stripes') return 'Глубокая ночь… Самое время открыть книгу в тишине и пойти спать.';
+        if (skin.id === 'ellen-zzz') return 'Уже ночь. Закрывай ноут, дочитай пару страниц и иди спать.';
+        if (skin.id === 'chocola-maid') return 'Поздний час! Отдохни с книгой, а остальное подождёт до утра.';
+        return 'Поздний час — береги силы, пара страниц книги перед сном и спать.';
+      }
+      return first;
+    }
+
+    let liveReactionText = '';
+    let liveReactionMood = '';
+    let reactionResetTimer = null;
+
+    function renderChibiSvg(skin, moodOverride = '') {
+      const cfg = CHIBI_THEMES[skin.id] || CHIBI_THEMES['goth-skull'];
+      const slot = getTimeSlot();
+      const mood = moodOverride || (focusState.running ? 'focus' : slot === 'night' ? 'sleepy' : 'normal');
+      const wrap = document.getElementById('chibiWrap');
+      if (!wrap) return;
+      wrap.classList.toggle('happy', mood === 'happy');
+      wrap.classList.toggle('sleepy', mood === 'sleepy');
+
+      const backHair =
+        cfg.style === 'twintails'
+          ? `<g class="chibi-hair-sway">
+               <path d="M9 15 C4 18 4 29 7 35 C10 32 10 24 12 20 Z" fill="${cfg.hairDark}"/>
+               <path d="M31 15 C36 18 36 29 33 35 C30 32 30 24 28 20 Z" fill="${cfg.hairDark}"/>
+             </g>`
+          : cfg.style === 'long'
+          ? `<g class="chibi-hair-sway">
+               <path d="M9 14 C7 22 7 33 10 37 L30 37 C33 33 33 22 31 14 Z" fill="${cfg.hairDark}"/>
+             </g>`
+          : `<g class="chibi-hair-sway">
+               <path d="M10 15 C8 22 9 29 12 31 L28 31 C31 29 32 22 30 15 Z" fill="${cfg.hairDark}"/>
+             </g>`;
+
+      const earsOrHorns =
+        cfg.style === 'neko'
+          ? `<g class="chibi-ear-sway">
+               <path d="M10 14 L8 4 L17 10 Z" fill="${cfg.hair}"/>
+               <path d="M11 12 L10 6.5 L15.5 10 Z" fill="${cfg.acc || '#f472b6'}"/>
+               <path d="M30 14 L32 4 L23 10 Z" fill="${cfg.hair}"/>
+               <path d="M29 12 L30 6.5 L24.5 10 Z" fill="${cfg.acc || '#f472b6'}"/>
+             </g>`
+          : cfg.style === 'demon'
+          ? `<g class="chibi-ear-sway">
+               <path d="M12 11 C10 6 12 4 15 8 Z" fill="${cfg.acc || '#c084fc'}"/>
+               <path d="M28 11 C30 6 28 4 25 8 Z" fill="${cfg.acc || '#c084fc'}"/>
+             </g>`
+          : cfg.shark
+          ? `<path class="chibi-ear-sway" d="M24 9 L28 4 L29 11 Z" fill="${cfg.acc}"/>`
+          : cfg.ribbon
+          ? `<g class="chibi-ear-sway">
+               <circle cx="28.5" cy="10.5" r="2.2" fill="${cfg.ribbon}"/>
+               <path d="M28.5 10.5 L33 8 L32 13 Z" fill="${cfg.ribbon}"/>
+             </g>`
+          : '';
+
+      const eyes =
+        mood === 'happy'
+          ? `<path d="M13 21 Q15.2 18.2 17.4 21" fill="none" stroke="#18181b" stroke-width="1.9" stroke-linecap="round"/>
+             <path d="M22.6 21 Q24.8 18.2 27 21" fill="none" stroke="#18181b" stroke-width="1.9" stroke-linecap="round"/>`
+          : `<g class="chibi-eyes-blink">
+               <ellipse cx="15.2" cy="21" rx="2.1" ry="2.6" fill="${cfg.eye}"/>
+               <circle cx="15.8" cy="20" r="0.8" fill="#ffffff"/>
+               <ellipse cx="24.8" cy="21" rx="2.1" ry="2.6" fill="${cfg.eye}"/>
+               <circle cx="25.4" cy="20" r="0.8" fill="#ffffff"/>
+               ${mood === 'focus' ? `<path d="M12.5 17.5 L17.6 18.6 M27.5 17.5 L22.4 18.6" stroke="#18181b" stroke-width="1.3" stroke-linecap="round"/>` : ''}
+             </g>`;
+
+      const glasses = cfg.glasses
+        ? `<circle cx="15.2" cy="21" r="3.2" fill="none" stroke="#18181b" stroke-width="0.95"/>
+           <circle cx="24.8" cy="21" r="3.2" fill="none" stroke="#18181b" stroke-width="0.95"/>
+           <line x1="18.4" y1="21" x2="21.6" y2="21" stroke="#18181b" stroke-width="0.95"/>`
+        : '';
+
+      const mouth =
+        mood === 'happy'
+          ? `<path d="M18.2 25.3 Q20 27.6 21.8 25.3" fill="none" stroke="#be123c" stroke-width="1.3" stroke-linecap="round"/>`
+          : `<path d="M18.6 25.8 Q20 26.7 21.4 25.8" fill="none" stroke="#713f47" stroke-width="1.15" stroke-linecap="round"/>`;
+
+      wrap.innerHTML = `
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          ${backHair}
+          <path d="M13 38 C13 32 27 32 27 38 Z" fill="${skin.colors.pink}" opacity="0.9"/>
+          <circle cx="20" cy="20.5" r="10.2" fill="#ffe7dc"/>
+          <ellipse cx="12.8" cy="24" rx="2.1" ry="1.1" fill="#fb7185" opacity="${mood === 'happy' ? '0.62' : '0.32'}"/>
+          <ellipse cx="27.2" cy="24" rx="2.1" ry="1.1" fill="#fb7185" opacity="${mood === 'happy' ? '0.62' : '0.32'}"/>
+          ${eyes}
+          ${glasses}
+          ${mouth}
+          <path d="M9.5 19 C9.5 11.2 14.2 8.5 20 8.5 C25.8 8.5 30.5 11.2 30.5 19 C28.5 15 26 14 23.5 16.5 L20 13.5 L16.8 16.8 C14.5 14 11.8 15 9.5 19 Z" fill="${cfg.hair}"/>
+          ${earsOrHorns}
+        </svg>
+      `;
+    }
+
+    const REACTIONS_BY_TYPE = {
+      task_done: [
+        'Отлично! Задание закрыто — ещё один шаг сделан.',
+        'Плюс одно выполненное дело. Движемся чисто и по плану!',
+        'Готово! Приятно видеть, как список становится короче.',
+      ],
+      habit_done: [
+        'Привычка засчитана — серия укрепляется!',
+        'Так держать! Ещё один день по привычке в копилку.',
+        'Супер, отметка стоит. Серия растёт!',
+      ],
+      book_done: [
+        'Поздравляю с прочитанной книгой! Что возьмём следующим?',
+        'Книга завершена! Отличное пополнение на полке прочитанного.',
+      ],
+      focus_done: [
+        'Сессия фокуса завершена! Самое время сделать короткий перерыв.',
+      ],
+    };
+
+    function triggerCharacterReaction(kind = 'task_done', titleHint = '') {
+      const skin = getCurrentSkin();
+      const pool = REACTIONS_BY_TYPE[kind] || REACTIONS_BY_TYPE.task_done;
+      let line = pool[Math.floor(Math.random() * pool.length)];
+      if (skin.id === 'ellen-zzz' && kind === 'task_done') {
+        line = 'На одно задание меньше — ближе к законному отдыху.';
+      } else if (skin.id === 'vergil-yamato' && kind === 'task_done') {
+        line = 'Чистое исполнение. Мотивация растёт.';
+      } else if (skin.id === 'yumeko-kakegurui' && kind === 'task_done') {
+        line = 'Партия в твою пользу! Ещё одно задание закрыто ♠';
+      } else if (skin.id === 'chocola-maid' && kind === 'task_done') {
+        line = 'Умничка! Задание выполнено, так держать!';
+      } else if (titleHint && kind === 'book_done') {
+        line = `«${titleHint}» прочитана! Можно выставить оценку и выбрать следующую.`;
+      }
+
+      liveReactionText = line;
+      liveReactionMood = 'happy';
+      renderHeroArt();
+
+      const card = document.getElementById('sideAnimeCard');
+      const box = document.getElementById('heroQuote');
+      card?.classList.add('reacting');
+      box?.classList.add('reacting');
+      clearTimeout(reactionResetTimer);
+      reactionResetTimer = setTimeout(() => {
+        card?.classList.remove('reacting');
+        box?.classList.remove('reacting');
+        liveReactionMood = '';
+        liveReactionText = '';
+        renderHeroArt();
+      }, 3600);
+    }
+
     function renderHeroArt() {
       const skin = getCurrentSkin();
       const card = document.getElementById('sideAnimeCard');
@@ -2498,7 +2930,10 @@
       if (skin.img) {
         const src = `${skin.img}?v=hd4`;
         if (poster) {
-          poster.innerHTML = `<img id="heroArtImg" src="${src}" alt="${escapeHtml(skin.name)}" style="object-position:${skin.cropPos || '50% 18%'};" />`;
+          const curImg = document.getElementById('heroArtImg');
+          if (!curImg || curImg.getAttribute('data-skin') !== skin.id) {
+            poster.innerHTML = `<img id="heroArtImg" data-skin="${skin.id}" src="${src}" alt="${escapeHtml(skin.name)}" style="object-position:${skin.cropPos || '50% 18%'};" />`;
+          }
         }
         if (mobImg) {
           mobImg.src = src;
@@ -2510,16 +2945,26 @@
         if (mobImg) mobImg.style.display = 'none';
       }
 
+      renderChibiSvg(skin, liveReactionMood);
+
       if (skin.quotes && skin.quotes.length) {
         const idx = quoteIdx % skin.quotes.length;
+        const displayQuote =
+          liveReactionText ||
+          (quoteIdx === 0 ? getTimeGreeting(skin) : skin.quotes[idx]);
         if (quoteAuthor) quoteAuthor.textContent = skin.name.split('·')[0].trim();
-        if (quoteCount) quoteCount.textContent = `${idx + 1}/${skin.quotes.length} · ещё →`;
-        if (quoteText) quoteText.textContent = `«${skin.quotes[idx]}»`;
+        if (quoteCount) {
+          quoteCount.textContent = liveReactionText ? '★ реакция' : `${idx + 1}/${skin.quotes.length} · ещё →`;
+        }
+        if (quoteText) quoteText.textContent = `«${displayQuote}»`;
       }
     }
 
     function cycleHeroQuote() {
+      liveReactionText = '';
+      liveReactionMood = '';
       quoteIdx++;
+      playUiSound('pop');
       renderHeroArt();
     }
 
@@ -2810,6 +3255,7 @@
             </div>
             <div class="row-right">
               ${p.remind_time ? `<span class="time-col" style="text-align:right;">${escapeHtml(p.remind_time)}</span>` : ''}
+              ${!p.is_done ? `<button class="btn btn-ghost" onclick="startFocusFromId(${p.id})" title="Запустить фокус на 25 минут">⏱</button>` : ''}
               <button class="btn btn-ghost" onclick="deletePlanItem(${p.id})" title="Удалить">×</button>
             </div>
           </div>
@@ -3039,6 +3485,7 @@
                   </div>
                   <div class="row-right">
                     ${p.remind_time ? `<span class="badge">${escapeHtml(p.remind_time)}</span>` : ''}
+                    ${!p.is_done ? `<button class="btn btn-ghost" onclick="startFocusFromId(${p.id})" title="Запустить фокус на 25 минут">⏱</button>` : ''}
                     <button class="btn btn-ghost" onclick="deletePlanItem(${p.id})" title="Удалить">×</button>
                   </div>
                 </div>
@@ -3295,7 +3742,13 @@
     }
 
     async function togglePlan(id) {
-      await api('/api/plans/toggle', { id });
+      const res = await api('/api/plans/toggle', { id });
+      if (res.item && res.item.is_done) {
+        playUiSound('done');
+        triggerCharacterReaction('task_done', res.item.title);
+      } else {
+        playUiSound('pop');
+      }
       await loadState(true, false);
     }
 
@@ -3422,7 +3875,13 @@
     }
 
     async function toggleHabitToday(id) {
-      await api('/api/habits/toggle', { id, date_str: STATE.todayStr });
+      const res = await api('/api/habits/toggle', { id, date_str: STATE.todayStr });
+      if (res.log && res.log.status === 'done') {
+        playUiSound('done');
+        triggerCharacterReaction('habit_done');
+      } else {
+        playUiSound('pop');
+      }
       await loadState(true, false);
     }
 
@@ -3461,7 +3920,13 @@
     }
 
     async function cycleBook(id) {
-      await api('/api/books/cycle-status', { id });
+      const res = await api('/api/books/cycle-status', { id });
+      if (res.item && res.item.status === 'done') {
+        playUiSound('done');
+        triggerCharacterReaction('book_done', res.item.title);
+      } else {
+        playUiSound('pop');
+      }
       await loadState(true, false);
     }
 
@@ -3573,6 +4038,21 @@
         btnA.classList.toggle('btn-primary', on);
       }
 
+      const fxOn = s.fx_enabled !== '0';
+      document.body.classList.toggle('no-fx', !fxOn);
+      const btnFx = document.getElementById('stFxBtn');
+      if (btnFx) {
+        btnFx.textContent = fxOn ? '● Вкл' : 'Выкл';
+        btnFx.classList.toggle('btn-primary', fxOn);
+      }
+
+      const soundOn = s.sound_enabled !== '0';
+      const btnSnd = document.getElementById('stSoundBtn');
+      if (btnSnd) {
+        btnSnd.textContent = soundOn ? '● Вкл' : 'Выкл';
+        btnSnd.classList.toggle('btn-primary', soundOn);
+      }
+
       const lead = String(s.lesson_lead_minutes || '2');
       document.querySelectorAll('#stLeadMinPills .seg-pill').forEach((b) => {
         b.classList.toggle('active', b.getAttribute('data-min') === lead);
@@ -3648,13 +4128,298 @@
       await loadState(true, false);
     }
 
+    // ================= МИКРО-ЗВУКИ (WEB AUDIO API) =================
+    let audioCtx = null;
+    function playUiSound(type = 'pop') {
+      if ((STATE.settings && STATE.settings.sound_enabled) === '0') return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        if (!audioCtx) audioCtx = new AC();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+
+        const playTone = (freq, start, dur, gainVal) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(gainVal, start + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(start);
+          osc.stop(start + dur + 0.01);
+        };
+
+        if (type === 'done') {
+          playTone(587.3, now, 0.11, 0.045);
+          playTone(880.0, now + 0.075, 0.16, 0.05);
+        } else if (type === 'timer') {
+          playTone(523.25, now, 0.16, 0.06);
+          playTone(659.25, now + 0.14, 0.16, 0.06);
+          playTone(783.99, now + 0.28, 0.28, 0.07);
+        } else {
+          playTone(520, now, 0.055, 0.025);
+        }
+      } catch {}
+    }
+
+    // ================= МИНИ-ТАЙМЕР ФОКУСА (25 МИН) =================
+    let focusState = { running: false, paused: false, secondsLeft: 1500, label: 'Фокус', intervalId: null };
+
+    function startFocusFromId(id) {
+      const all = [...(STATE.todayPlans || []), ...(STATE.overduePlans || []), ...(STATE.globalPlans || [])];
+      const item = all.find((x) => x.id === id);
+      startFocusTimer(item ? item.title : 'Фокус');
+    }
+
+    function startFocusTimer(label = 'Фокус', minutes = 25) {
+      clearInterval(focusState.intervalId);
+      focusState = {
+        running: true,
+        paused: false,
+        secondsLeft: minutes * 60,
+        label: label || 'Фокус',
+        intervalId: null,
+      };
+      playUiSound('pop');
+      renderFocusPill();
+      renderHeroArt();
+      focusState.intervalId = setInterval(() => {
+        if (focusState.paused) return;
+        focusState.secondsLeft--;
+        if (focusState.secondsLeft <= 0) {
+          clearInterval(focusState.intervalId);
+          const doneLabel = focusState.label;
+          focusState.running = false;
+          renderFocusPill();
+          playUiSound('timer');
+          triggerCharacterReaction('focus_done', doneLabel);
+          showToast(`● Фокус завершён: «${doneLabel}» — сделай перерыв`);
+          return;
+        }
+        renderFocusPill();
+      }, 1000);
+    }
+
+    function toggleFocusPause() {
+      if (!focusState.running) return;
+      focusState.paused = !focusState.paused;
+      playUiSound('pop');
+      renderFocusPill();
+    }
+
+    function stopFocusTimer() {
+      clearInterval(focusState.intervalId);
+      focusState.running = false;
+      focusState.paused = false;
+      renderFocusPill();
+      renderHeroArt();
+    }
+
+    function renderFocusPill() {
+      const pill = document.getElementById('focusPill');
+      if (!pill) return;
+      pill.classList.toggle('active', focusState.running);
+      if (!focusState.running) return;
+      const m = String(Math.floor(focusState.secondsLeft / 60)).padStart(2, '0');
+      const s = String(focusState.secondsLeft % 60).padStart(2, '0');
+      document.getElementById('focusClock').textContent = `${m}:${s}`;
+      document.getElementById('focusTaskLabel').textContent = focusState.label;
+      document.getElementById('focusPauseBtn').textContent = focusState.paused ? '▶' : '❚❚';
+    }
+
+    // ================= ЖИВЫЕ ЧАСТИЦЫ И ПАРАЛЛАКС ПОРТРЕТА =================
+    function setupParallax() {
+      let targetX = 0;
+      let targetY = 0;
+      let curX = 0;
+      let curY = 0;
+      window.addEventListener('mousemove', (e) => {
+        if (document.body.classList.contains('no-fx')) return;
+        const w = window.innerWidth || 1;
+        const h = window.innerHeight || 1;
+        targetX = ((e.clientX / w) - 0.5) * -8;
+        targetY = ((e.clientY / h) - 0.5) * -6;
+      });
+      function tick() {
+        curX += (targetX - curX) * 0.08;
+        curY += (targetY - curY) * 0.08;
+        const img = document.getElementById('heroArtImg');
+        if (img && !document.body.classList.contains('no-fx')) {
+          img.style.setProperty('--px', `${curX.toFixed(2)}px`);
+          img.style.setProperty('--py', `${curY.toFixed(2)}px`);
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function initFxParticles() {
+      const canvas = document.getElementById('fxCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let W = 0;
+      let H = 0;
+      const parts = [];
+      const COUNT = 22;
+
+      function resize() {
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      for (let i = 0; i < COUNT; i++) {
+        parts.push({
+          x: Math.random() * (window.innerWidth || 1200),
+          y: Math.random() * (window.innerHeight || 800),
+          r: 2 + Math.random() * 3.2,
+          vy: 0.25 + Math.random() * 0.45,
+          vx: (Math.random() - 0.5) * 0.35,
+          rot: Math.random() * Math.PI * 2,
+          vr: (Math.random() - 0.5) * 0.015,
+          a: 0.22 + Math.random() * 0.35,
+        });
+      }
+
+      function draw() {
+        if (!document.hidden && !document.body.classList.contains('no-fx')) {
+          const skin = getCurrentSkin();
+          ctx.clearRect(0, 0, W, H);
+          if (skin.id !== 'strict-minimal') {
+            const isSakura = skin.id === 'terrorblade-sakura' || skin.id === 'chocola-maid';
+            const isSpark = ['ellen-zzz', 'cyber-rave-miku', 'gothic-miku-feathers', 'vergil-yamato', 'pink-poker-cards', 'cc-code-geass'].includes(skin.id);
+            const accentColor = skin.colors?.pink || '#e11d74';
+            for (const p of parts) {
+              p.y += isSpark ? -p.vy * 0.75 : p.vy;
+              p.x += p.vx + Math.sin(p.y * 0.012) * 0.18;
+              p.rot += p.vr;
+              if (p.y > H + 10) { p.y = -10; p.x = Math.random() * W; }
+              if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+              if (p.x > W + 10) p.x = -10;
+              if (p.x < -10) p.x = W + 10;
+
+              ctx.save();
+              ctx.globalAlpha = p.a;
+              ctx.translate(p.x, p.y);
+              ctx.rotate(p.rot);
+              ctx.fillStyle = accentColor;
+              if (isSakura) {
+                ctx.beginPath();
+                ctx.ellipse(0, 0, p.r * 1.4, p.r * 0.8, 0, 0, Math.PI * 2);
+                ctx.fill();
+              } else if (isSpark) {
+                ctx.fillRect(-p.r * 0.7, -p.r * 0.7, p.r * 1.4, p.r * 1.4);
+              } else {
+                ctx.beginPath();
+                ctx.arc(0, 0, p.r * 0.75, 0, Math.PI * 2);
+                ctx.fill();
+              }
+              ctx.restore();
+            }
+          }
+        } else {
+          ctx.clearRect(0, 0, W, H);
+        }
+        requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+    }
+
+    // ================= БЕЗОПАСНОЕ ОБНОВЛЕНИЕ ПРИЛОЖЕНИЯ (↻) =================
+    function setUpdateSpinning(on) {
+      document.getElementById('btnAppUpdate')?.classList.toggle('spinning', on);
+      document.getElementById('btnMobAppUpdate')?.classList.toggle('spinning', on);
+    }
+
+    async function handleUpdateClick() {
+      playUiSound('pop');
+      const isLocalHost = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+      if (!isLocalHost) {
+        location.reload();
+        return;
+      }
+      setUpdateSpinning(true);
+      try {
+        const res = await api('/api/update/check', {});
+        if (res.hasUpdate) {
+          const msg = res.latestMsg ? ` (${res.latestMsg})` : '';
+          showToast(
+            `Найдено обновление: ${res.behindCount} комм.${msg}. Создать резервную копию базы и обновить?`,
+            `<button class="btn btn-primary" style="padding:5px 11px;font-size:12px;" onclick="confirmApplyUpdate()">Обновить и перезапустить</button>
+             <button class="btn btn-ghost" onclick="hideGuessBanner()">Позже</button>`
+          );
+          return;
+        }
+        await loadState(true, false);
+        showToast(res.warn ? `● ${res.warn}` : '● У вас актуальная версия · Данные обновлены');
+      } catch (err) {
+        await loadState(true, false);
+        showToast(`● Экран обновлён (${err.message})`);
+      } finally {
+        setUpdateSpinning(false);
+      }
+    }
+
+    async function confirmApplyUpdate() {
+      setUpdateSpinning(true);
+      showToast('⏳ Сохраняю резервную копию базы и устанавливаю обновление...');
+      try {
+        const res = await api('/api/update/apply', {});
+        if (!res.ok) {
+          showToast(`× ${res.error || 'Не удалось обновить'}`);
+          setUpdateSpinning(false);
+          return;
+        }
+        if (res.mode === 'restart_app') {
+          showToast('● Перезапускаю окно приложения для завершения обновления...');
+          return;
+        }
+        if (res.mode === 'restart_server') {
+          showToast('● Перезагружаю сервис и интерфейс...');
+          setTimeout(async () => {
+            for (let i = 0; i < 20; i++) {
+              try {
+                const ping = await fetch('/api/state', { cache: 'no-store' });
+                if (ping.ok) {
+                  location.reload();
+                  return;
+                }
+              } catch {}
+              await new Promise((r) => setTimeout(r, 400));
+            }
+            location.reload();
+          }, 900);
+          return;
+        }
+        showToast('● Обновление установлено — перезагружаю экран...');
+        setTimeout(() => location.reload(), 500);
+      } catch (err) {
+        showToast(`× Ошибка обновления: ${err.message}`);
+        setUpdateSpinning(false);
+      }
+    }
+
     document.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('keydown', (e) => {
       if (e.key === 'F12' || (e.ctrlKey && ['p', 'P', 's', 'S'].includes(e.key))) {
         e.preventDefault();
       }
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyK') {
+        e.preventDefault();
+        toggleQuickDrawer();
+      } else if (e.key === 'Escape') {
+        closeStudio();
+        toggleQuickDrawer(false);
+      }
     });
 
+    setupParallax();
+    initFxParticles();
     loadUiPrefs();
     loadState(false, false);
     setInterval(() => loadState(true, true), 3000);
