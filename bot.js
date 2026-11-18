@@ -118,10 +118,30 @@ function getActiveBotToken() {
   return envTok || dbTok;
 }
 
+function safeWriteFile(filePath, content, options) {
+  try {
+    fs.writeFileSync(filePath, content, options);
+  } catch (err) {
+    if (err && (err.code === 'EPERM' || err.code === 'EACCES') && fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {}
+      fs.writeFileSync(filePath, content, options);
+      if (process.platform === 'win32') {
+        try {
+          execFileSync('attrib', ['+H', filePath], { windowsHide: true });
+        } catch {}
+      }
+      return;
+    }
+    throw err;
+  }
+}
+
 // Записываем bot.pid для удобного управления фоновым процессом
 const PID_FILE = path.join(__dirname, 'bot.pid');
 try {
-  fs.writeFileSync(PID_FILE, String(process.pid), 'utf8');
+  safeWriteFile(PID_FILE, String(process.pid), 'utf8');
 } catch {}
 
 function getWebAccessKey() {
@@ -1962,14 +1982,14 @@ function readLocalAppVersion() {
 }
 
 function writeLocalAppVersion(data) {
-  fs.writeFileSync(APP_VERSION_FILE, JSON.stringify(data, null, 2), 'utf8');
+  safeWriteFile(APP_VERSION_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
 function isAllowedAppUpdatePath(relPath) {
   if (!relPath || typeof relPath !== 'string') return false;
   if (relPath.includes('..') || relPath.includes('\\') || relPath.startsWith('/')) return false;
   return (
-    /^(bot\.js|db\.js|parser\.js|package\.json|start-bot\.vbs|status-bot\.cmd|stop-bot\.cmd|app\.ico|joker-noir\.ico|joker-noir-v2\.ico)$/.test(
+    /^(bot\.js|db\.js|parser\.js|package\.json|README\.md|start-bot\.vbs|status-bot\.cmd|stop-bot\.cmd|joker-noir-v2\.ico)$/.test(
       relPath
     ) ||
     relPath === 'public/index.html' ||
@@ -2105,7 +2125,7 @@ async function applyGithubDirectUpdate() {
         throw new Error(`Недопустимый путь: ${file.relPath}`);
       }
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-      fs.writeFileSync(targetPath, file.buf);
+      safeWriteFile(targetPath, file.buf);
       nextFileShas[file.relPath] = file.sha;
       if (/^(bot|db|parser)\.js$/i.test(file.relPath)) jsChanged = true;
     }
@@ -2363,10 +2383,8 @@ function startWebServer() {
         }
       }
 
-      if (pathname === '/anime-art.jpg' || pathname.startsWith('/gallery/')) {
-        const relPath = pathname === '/anime-art.jpg'
-          ? 'anime-art.jpg'
-          : path.join('gallery', path.basename(pathname));
+      if (pathname.startsWith('/gallery/')) {
+        const relPath = path.join('gallery', path.basename(pathname));
         const imgPath = path.join(__dirname, 'public', relPath);
         if (fs.existsSync(imgPath) && fs.statSync(imgPath).isFile()) {
           const ext = path.extname(imgPath).toLowerCase();
@@ -2738,7 +2756,7 @@ function startCloudflareTunnel() {
       if (m && m[0] !== publicTunnelUrl) {
         publicTunnelUrl = m[0];
         try {
-          fs.writeFileSync(
+          safeWriteFile(
             TUNNEL_STATE_FILE,
             JSON.stringify({ pid: tunnelProcess.pid, url: publicTunnelUrl }),
             'utf8'

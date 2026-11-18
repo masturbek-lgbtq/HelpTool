@@ -7,5 +7,5 @@ if not exist bot.pid (
 )
 set /p PID=<bot.pid
 taskkill /PID %PID% /T /F >nul 2>&1
-del /f /q bot.pid >nul 2>&1
+del /f /q /a bot.pid >nul 2>&1
 echo Бот остановлен ^(PID %PID%^).
