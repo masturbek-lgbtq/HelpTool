@@ -1,0 +1,12 @@
+{
+  "name": "personal-assistant-bot",
+  "version": "1.0.0",
+  "description": "Минималистичный личный помощник в Telegram: уроки, привычки, планы и заметки + Mini App",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

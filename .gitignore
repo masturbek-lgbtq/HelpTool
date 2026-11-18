@@ -1,0 +1,18 @@
+# Личные данные, ключи и база записей (НИКОГДА не загружаются на GitHub)
+.env
+assistant.db
+assistant.db-wal
+assistant.db-shm
+webview-data/
+tunnel.json
+bot.log
+bot.pid
+
+# Тяжёлые служебные бинарники (кладутся в раздел Releases)
+bin/node.exe
+bin/cloudflared.exe
+
+# Временные файлы ОС
+Thumbs.db
+desktop.ini
+.DS_Store
