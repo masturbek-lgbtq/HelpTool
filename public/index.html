@@ -1,0 +1,3519 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Помощник</title>
+  <link rel="icon" type="image/png" sizes="256x256" href="/joker-icon-256.png" />
+  <link rel="shortcut icon" type="image/x-icon" href="/joker-noir-v2.ico" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #f5f4f8;
+      --surface: #ffffff;
+      --surface-glass: rgba(255, 255, 255, 0.88);
+      --sidebar-glass: rgba(255, 255, 255, 0.92);
+      --header-glass: rgba(255, 255, 255, 0.86);
+      --surface-2: rgba(20, 20, 28, 0.05);
+      --text: #15141b;
+      --text-muted: #666375;
+      --text-faint: #9895a6;
+      --glass-border: rgba(20, 20, 28, 0.09);
+      --divider: rgba(20, 20, 28, 0.07);
+      --accent: #e11d74;
+      --accent-fg: #ffffff;
+      --accent-soft: rgba(225, 29, 116, 0.12);
+      --danger: #dc2626;
+      --soft-shadow: 0 8px 26px rgba(20, 20, 30, 0.06);
+      --radius-card: 16px;
+      --radius-ctrl: 10px;
+      --wallpaper-url: url('/gallery/art-02.jpg?v=hd4');
+      --wallpaper-pos: 60% 18%;
+      --wallpaper-display: block;
+      --scrim-bg: rgba(245, 244, 248, 0.72);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.45;
+      min-height: 100vh;
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    /* Полноэкранный аниме-арт на фоне */
+    .bg-watermark {
+      position: fixed;
+      inset: 0;
+      display: var(--wallpaper-display);
+      background-image: var(--wallpaper-url);
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: var(--wallpaper-pos);
+      pointer-events: none;
+      z-index: 0;
+      transition: background-image 0.25s ease, background-position 0.25s ease;
+    }
+
+    .bg-scrim {
+      position: fixed;
+      inset: 0;
+      background: var(--scrim-bg);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      pointer-events: none;
+      z-index: 0;
+      transition: background-color 0.2s ease;
+    }
+
+    /* Основной каркас Варианта 2: Боковое меню + рабочая область */
+    .shell {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* Левая боковая панель (ПК) */
+    .sidebar {
+      width: 248px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 16px 13px;
+      background: var(--sidebar-glass);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-right: 1px solid var(--glass-border);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .side-top {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .anime-card {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+      background: var(--surface);
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .anime-card:hover {
+      border-color: var(--accent);
+    }
+
+    .anime-card.hidden-art .anime-poster {
+      display: none;
+    }
+
+    .anime-poster {
+      height: 124px;
+      width: 100%;
+      overflow: hidden;
+      background: var(--surface-2);
+      position: relative;
+    }
+
+    .anime-poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 18%;
+      display: block;
+    }
+
+    .anime-poster-fallback {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .anime-cap {
+      padding: 9px 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .anime-cap-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .anime-cap-badge {
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .side-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .side-btn {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 11px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      text-align: left;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .side-btn:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .side-btn.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .side-cnt {
+      font-size: 11.5px;
+      font-weight: 600;
+      opacity: 0.78;
+      white-space: nowrap;
+    }
+
+    .side-cnt.alert {
+      color: var(--danger);
+      opacity: 1;
+    }
+
+    .side-quote {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      padding: 10px 10px 0;
+      border-top: 1px solid var(--divider);
+      cursor: pointer;
+    }
+
+    .side-foot {
+      padding-top: 10px;
+      border-top: 1px solid var(--divider);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .status-dot-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 5px 7px;
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .status-dot-btn:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .status-dot-btn.paused {
+      color: var(--danger);
+    }
+
+    /* Рабочая область справа */
+    .workspace {
+      flex: 1;
+      min-width: 0;
+      padding: 20px 26px 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Мобильная верхняя шапка (видна только <= 860px) */
+    .mobile-header {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      border-radius: 14px;
+      background: var(--header-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+    }
+
+    .mob-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .mob-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 1.5px solid var(--accent);
+      flex-shrink: 0;
+      background: var(--surface-2);
+      cursor: pointer;
+    }
+
+    .mob-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 18%;
+      display: block;
+    }
+
+    .mob-title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mob-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mob-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* Десктопная верхняя строка заголовка */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .top-title {
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .top-sub {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Кнопки и контролы */
+    .pill-btn {
+      border: 1px solid var(--glass-border);
+      background: var(--surface-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 7px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .pill-btn:hover {
+      border-color: var(--accent);
+    }
+
+    .pill-btn.primary {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    .pill-btn.primary:hover {
+      opacity: 0.92;
+    }
+
+    .theme-stepper {
+      display: inline-flex;
+      align-items: center;
+      background: var(--surface-glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      padding: 2px 4px;
+      gap: 2px;
+    }
+
+    .stepper-arrow {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      font-size: 10.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stepper-arrow:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .stepper-label {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 7px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .btn {
+      border: 1px solid var(--glass-border);
+      background: var(--surface-glass);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 7px 12px;
+      border-radius: var(--radius-ctrl);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.92;
+    }
+
+    .btn-ghost {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 5px 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .btn-link {
+      border: none;
+      background: transparent;
+      color: var(--accent);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 3px 4px;
+    }
+
+    .btn-link:hover {
+      text-decoration: underline;
+    }
+
+    .input, select, textarea {
+      width: 100%;
+      font-family: inherit;
+      font-size: 13.5px;
+      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-ctrl);
+      padding: 8px 11px;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      background: var(--surface);
+    }
+
+    textarea.input {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    /* Быстрая умная панель добавления (выдвигается по клику «+ Быстро добавить») */
+    .quick-drawer {
+      display: none;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius-card);
+      background: var(--surface-glass);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--accent);
+      box-shadow: var(--soft-shadow);
+    }
+
+    .quick-drawer.open {
+      display: block;
+    }
+
+    .quick-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .quick-hint {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 7px;
+    }
+
+    /* Тост-уведомление и баннер переноса */
+    .toast-banner {
+      display: none;
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--surface-glass);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--accent);
+      font-size: 12.5px;
+    }
+
+    .toast-banner.show {
+      display: block;
+    }
+
+    .toast-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .toast-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    /* Вкладки-экраны */
+    .view-pane {
+      display: none;
+    }
+
+    .view-pane.active {
+      display: block;
+    }
+
+    /* Bento-сетка (Вариант 2) */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      align-items: start;
+    }
+
+    .bento-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    /* Чистая карточка Bento / раздела */
+    .card {
+      background: var(--surface-glass);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-card);
+      box-shadow: var(--soft-shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .card-mb {
+      margin-bottom: 14px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 13px 16px 11px;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .card-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .card-head-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .card-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .card-body {
+      padding: 6px 16px 14px;
+    }
+
+    .card-body-pad {
+      padding: 13px 16px;
+    }
+
+    /* Строки списков */
+    .row-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 16px;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .row-item:last-child {
+      border-bottom: none;
+    }
+
+    .row-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .row-main {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .row-title {
+      font-size: 13.5px;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .row-title.done {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .row-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      word-break: break-word;
+    }
+
+    .row-right {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .time-col {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      width: 42px;
+      flex-shrink: 0;
+    }
+
+    .lesson-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .lesson-dot.off {
+      background: var(--text-faint);
+    }
+
+    .check-btn {
+      width: 21px;
+      height: 21px;
+      border: 1.5px solid var(--text-faint);
+      border-radius: 50%;
+      background: transparent;
+      color: transparent;
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .check-btn:hover {
+      border-color: var(--accent);
+    }
+
+    .check-btn.checked {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    .star-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-faint);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 2px 4px;
+      line-height: 1;
+    }
+
+    .star-btn.on {
+      color: #f59e0b;
+    }
+
+    .badge {
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      white-space: nowrap;
+      border: 1px solid transparent;
+    }
+
+    .badge.accent {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: transparent;
+    }
+
+    .badge.clickable {
+      cursor: pointer;
+      border-color: var(--glass-border);
+    }
+
+    .badge.clickable:hover {
+      border-color: var(--accent);
+    }
+
+    .badge.danger {
+      background: rgba(220, 38, 38, 0.11);
+      color: var(--danger);
+    }
+
+    /* Просроченные дела (аккуратная полоска сверху в заданиях) */
+    .overdue-box {
+      background: rgba(220, 38, 38, 0.06);
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .overdue-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--danger);
+    }
+
+    /* Встроенный ввод нового задания в карточке */
+    .inline-add {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 14px;
+      border-top: 1px solid var(--divider);
+    }
+
+    .inline-add .input {
+      background: transparent;
+      border-color: transparent;
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+
+    .inline-add .input:focus {
+      background: var(--surface-2);
+      border-color: var(--glass-border);
+    }
+
+    /* Чипсы привычек на обзоре */
+    .habit-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding: 12px 16px 14px;
+    }
+
+    .habit-chip {
+      border: 1px solid var(--glass-border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 6px 11px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .habit-chip:hover {
+      border-color: var(--accent);
+    }
+
+    .habit-chip.on {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .habit-val-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 16px;
+      border-top: 1px solid var(--divider);
+    }
+
+    .empty-line {
+      padding: 14px 16px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    /* Фильтры и формы в разделах */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .seg-pill {
+      border: 1px solid var(--glass-border);
+      background: var(--surface-glass);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 11px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .seg-pill.active {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    .form-box {
+      background: var(--surface-glass);
+      backdrop-filter: blur(18px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-card);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+
+    .collapsible-panel {
+      display: none;
+    }
+
+    .collapsible-panel.open {
+      display: block;
+    }
+
+    .form-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .form-row > * {
+      flex: 1 1 130px;
+      min-width: 0;
+    }
+
+    /* Вкладки дней недели */
+    .day-tabs {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .day-tab {
+      border: 1px solid var(--glass-border);
+      background: var(--surface-glass);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 8px 4px;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .day-tab.active {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    /* Дни недели для привычки */
+    .weekday-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .wd-pill {
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--glass-border);
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .wd-pill.on {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Матрица привычек 14 дней (скролл строго внутри обёртки) */
+    .matrix-scroll {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 8px 14px 14px;
+    }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 520px;
+    }
+
+    .matrix-table th, .matrix-table td {
+      padding: 7px 4px;
+      text-align: center;
+      border-bottom: 1px solid var(--divider);
+      font-size: 11.5px;
+    }
+
+    .matrix-table th:first-child, .matrix-table td:first-child {
+      text-align: left;
+      padding-left: 2px;
+      min-width: 135px;
+    }
+
+    .m-cell {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: 1px solid var(--glass-border);
+      background: var(--surface-2);
+      color: transparent;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .m-cell.done {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-fg);
+    }
+
+    .m-cell.frozen {
+      opacity: 0.45;
+      border-style: dashed;
+    }
+
+    /* Редактирование книги внутри строки */
+    .book-edit-box {
+      display: none;
+      padding: 10px 16px 12px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .book-edit-box.open {
+      display: block;
+    }
+
+    /* Нижняя панель навигации на мобильных (скрыта на ПК) */
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 20;
+      background: var(--sidebar-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--glass-border);
+      padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    }
+
+    .mobile-nav-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 2px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .mob-nav-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 5px 2px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .mob-nav-btn .ico {
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .mob-nav-btn.active {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* Студия оформления и настроек */
+    .studio-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(10, 10, 16, 0.52);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .studio-backdrop.open {
+      display: flex;
+    }
+
+    .studio-sheet {
+      width: 100%;
+      max-width: 680px;
+      max-height: 88vh;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .studio-top {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--divider);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .studio-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .studio-save-toast {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .studio-save-toast.show {
+      opacity: 1;
+    }
+
+    .studio-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .studio-tab-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 11px 10px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .studio-tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .studio-body {
+      padding: 16px 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .tweak-bar {
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--surface-2);
+    }
+
+    .tweak-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tweak-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .tweak-sub {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .skins-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .skin-card {
+      border: 1.5px solid var(--glass-border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--surface);
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .skin-card:hover {
+      border-color: var(--accent);
+    }
+
+    .skin-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+
+    .skin-thumb {
+      height: 82px;
+      width: 100%;
+      background: var(--surface-2);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .skin-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .skin-info {
+      padding: 8px 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .skin-name {
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .skin-sub {
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+
+    .swatch-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid rgba(128, 128, 128, 0.35);
+    }
+
+    /* Адаптация под узкие экраны / Telegram на телефоне (без горизонтальной прокрутки!) */
+    @media (max-width: 860px) {
+      .sidebar {
+        display: none;
+      }
+      .mobile-header {
+        display: flex;
+      }
+      .mobile-nav {
+        display: block;
+      }
+      .workspace {
+        padding: 12px 12px 84px;
+      }
+      .topbar {
+        margin-bottom: 10px;
+        gap: 8px;
+      }
+      .topbar .top-title,
+      .topbar .theme-stepper {
+        display: none;
+      }
+      .top-sub {
+        margin-top: 0;
+      }
+      .bento-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .skins-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .studio-backdrop {
+        padding: 0;
+        align-items: flex-end;
+      }
+      .studio-sheet {
+        max-height: 92vh;
+        border-radius: 18px 18px 0 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-watermark" id="bgWatermark"></div>
+  <div class="bg-scrim" id="bgScrim"></div>
+
+  <div class="shell">
+    <!-- БОКОВОЕ МЕНЮ (ПК) -->
+    <aside class="sidebar">
+      <div class="side-top">
+        <div class="anime-card" id="sideAnimeCard" onclick="openStudio('themes')" title="Выбрать тему (16 артов)">
+          <div class="anime-poster" id="sideAnimePoster">
+            <img id="heroArtImg" src="/gallery/art-02.jpg?v=hd4" alt="Аниме-тема" />
+          </div>
+          <div class="anime-cap">
+            <span class="anime-cap-name" id="sideSkinName">Готика · Черепа</span>
+            <span class="anime-cap-badge">✦ 16 тем</span>
+          </div>
+        </div>
+
+        <nav class="side-nav" id="sideNav">
+          <button class="side-btn active" data-view="overview" onclick="switchView('overview')">
+            <span>Обзор дня</span>
+            <span class="side-cnt" id="cntOverview">Сегодня</span>
+          </button>
+          <button class="side-btn" data-view="lessons" onclick="switchView('lessons')">
+            <span>Школьное расписание</span>
+            <span class="side-cnt" id="cntLessons">0</span>
+          </button>
+          <button class="side-btn" data-view="daily" onclick="switchView('daily')">
+            <span>Дневные задания</span>
+            <span class="side-cnt" id="cntDaily">0</span>
+          </button>
+          <button class="side-btn" data-view="goals" onclick="switchView('goals')">
+            <span>Общие планы</span>
+            <span class="side-cnt" id="cntGoals">0</span>
+          </button>
+          <button class="side-btn" data-view="habits" onclick="switchView('habits')">
+            <span>База привычек</span>
+            <span class="side-cnt" id="cntHabits">0</span>
+          </button>
+          <button class="side-btn" data-view="books" onclick="switchView('books')">
+            <span>Книги</span>
+            <span class="side-cnt" id="cntBooks">0</span>
+          </button>
+        </nav>
+
+        <div class="side-quote" id="heroQuote" onclick="cycleHeroQuote()" title="Нажмите для другой фразы"></div>
+      </div>
+
+      <div class="side-foot">
+        <button class="status-dot-btn" id="btnPausePill" onclick="openStudio('settings')">● Активен</button>
+        <button class="status-dot-btn" onclick="openStudio('settings')">⚙ Настройки</button>
+      </div>
+    </aside>
+
+    <!-- РАБОЧАЯ ОБЛАСТЬ -->
+    <main class="workspace">
+      <!-- Компактная шапка для телефона (Telegram Mini App) -->
+      <header class="mobile-header">
+        <div class="mob-left">
+          <div class="mob-avatar" onclick="openStudio('themes')" title="Сменить тему">
+            <img id="mobArtImg" src="/gallery/art-02.jpg?v=hd4" alt="Тема" />
+          </div>
+          <div style="min-width:0;">
+            <div class="mob-title" id="mobDateTitle">Сегодня</div>
+            <div class="mob-sub" id="mobSkinSub">Готика · Черепа</div>
+          </div>
+        </div>
+        <div class="mob-actions">
+          <button class="btn" style="padding:5px 9px;" onclick="openStudio('themes')">✦ Темы</button>
+          <button class="btn" style="padding:5px 9px;" onclick="openStudio('settings')">⚙</button>
+        </div>
+      </header>
+
+      <!-- Верхняя строка заголовка и быстрых действий -->
+      <div class="topbar">
+        <div>
+          <div class="top-title" id="hdrDate">Сегодня</div>
+          <div class="top-sub" id="hdrSub">Загрузка...</div>
+        </div>
+        <div class="top-actions">
+          <div class="theme-stepper">
+            <button class="stepper-arrow" onclick="stepSkin(-1)" title="Предыдущая тема">◀</button>
+            <button class="stepper-label" onclick="openStudio('themes')" id="topSkinBtn">Тема</button>
+            <button class="stepper-arrow" onclick="stepSkin(1)" title="Следующая тема">▶</button>
+          </div>
+          <button class="pill-btn primary" onclick="toggleQuickDrawer()">+ Быстро добавить</button>
+        </div>
+      </div>
+
+      <!-- Выдвижная строка умного ввода (работает по тем же правилам, что и чат Telegram) -->
+      <div class="quick-drawer" id="quickDrawer">
+        <form class="quick-form" onsubmit="handleQuickCapture(event)">
+          <input
+            type="text"
+            id="quickInput"
+            class="input"
+            placeholder="Например: «в 17:00 конспект», «общий план: портфолио», «книга Дюна — Герберт»"
+            autocomplete="off"
+          />
+          <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Добавить</button>
+          <button type="button" class="btn btn-ghost" onclick="toggleQuickDrawer(false)">×</button>
+        </form>
+        <div class="quick-hint">
+          Понимает дневные задания с датой/временем, общие планы, книги («книга ...», «читаю ...», «прочитал ...») и отметки привычек.
+        </div>
+      </div>
+
+      <!-- Баннер подтверждения и быстрого переноса раздела -->
+      <div class="toast-banner" id="guessBanner">
+        <div class="toast-top">
+          <span id="guessText">Сохранено</span>
+          <button class="btn btn-ghost" onclick="hideGuessBanner()">×</button>
+        </div>
+        <div class="toast-actions" id="guessActions"></div>
+      </div>
+
+      <!-- ================= 1. ОБЗОР ДНЯ (BENTO) ================= -->
+      <section class="view-pane active" id="view-overview">
+        <div class="bento-grid">
+          <!-- Карточка 1: Школьное расписание -->
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Школьное расписание</span>
+              <div class="card-head-right">
+                <span class="card-meta" id="ovLessonsMeta"></span>
+                <button class="btn-link" onclick="switchView('lessons')">Вся неделя →</button>
+              </div>
+            </div>
+            <div id="ovLessonsList" class="live-render-zone"></div>
+          </div>
+
+          <!-- Карточка 2: Дневные задания -->
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Дневные задания</span>
+              <div class="card-head-right">
+                <span class="card-meta" id="ovDailyMeta"></span>
+                <button class="btn-link" onclick="switchView('daily')">Все дни →</button>
+              </div>
+            </div>
+            <div id="ovOverdueBox" class="live-render-zone"></div>
+            <div id="ovDailyList" class="live-render-zone"></div>
+            <form class="inline-add" onsubmit="handleOverviewDailyAdd(event)">
+              <input type="text" id="ovDailyInput" class="input" placeholder="+ Новое задание на сегодня..." autocomplete="off" />
+              <input type="time" id="ovDailyTime" class="input" style="width:94px; flex:0 0 94px;" title="Время напоминания" />
+              <button type="submit" class="btn btn-primary" style="flex:0 0 auto; padding:6px 11px;">+</button>
+            </form>
+          </div>
+
+          <!-- Карточка 3: Общие планы (глобальные) -->
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Общие планы (глобальное)</span>
+              <div class="card-head-right">
+                <button class="btn-link" onclick="switchView('goals')">Все планы →</button>
+              </div>
+            </div>
+            <div id="ovGoalsList" class="live-render-zone"></div>
+          </div>
+
+          <!-- Правый стек: Привычки + Книги -->
+          <div class="bento-stack">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">База привычек</span>
+                <div class="card-head-right">
+                  <span class="card-meta" id="ovHabitsMeta"></span>
+                  <button class="btn-link" onclick="switchView('habits')">14 дней →</button>
+                </div>
+              </div>
+              <div id="ovHabitsWrap" class="live-render-zone"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">Книги</span>
+                <div class="card-head-right">
+                  <button class="btn-link" onclick="switchView('books')">Открыть базу →</button>
+                </div>
+              </div>
+              <div id="ovBooksWrap" class="live-render-zone"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. ШКОЛЬНОЕ РАСПИСАНИЕ ================= -->
+      <section class="view-pane" id="view-lessons">
+        <div class="day-tabs" id="scheduleDayTabs"></div>
+
+        <div class="card card-mb">
+          <div class="card-head">
+            <span class="card-title" id="scheduleDayTitle">Расписание</span>
+            <div class="card-head-right">
+              <button class="btn btn-ghost" id="btnWeekMode" onclick="toggleWeekCycleMode()">1 неделя</button>
+              <button class="btn btn-ghost" id="btnSwitchWeek" style="display:none;" onclick="flipCurrentWeek()">Сменить неделю</button>
+            </div>
+          </div>
+          <div id="scheduleDayList" class="live-render-zone"></div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="pill-group">
+            <button class="btn btn-primary" onclick="togglePanel('panelAddLesson', 'panelBulkLesson')">+ Добавить урок</button>
+            <button class="btn" onclick="togglePanel('panelBulkLesson', 'panelAddLesson')">Загрузить списком</button>
+          </div>
+        </div>
+
+        <div class="form-box collapsible-panel" id="panelAddLesson">
+          <form class="form-grid" onsubmit="handleAddLesson(event)">
+            <div class="card-title">Новый урок</div>
+            <div class="form-row">
+              <input type="time" id="lesStart" class="input" value="08:30" required />
+              <input type="time" id="lesEnd" class="input" />
+              <select id="lesWeekType" class="input">
+                <option value="0">Каждую неделю</option>
+                <option value="1">Верхняя неделя (1)</option>
+                <option value="2">Нижняя неделя (2)</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <input type="text" id="lesSubject" class="input" placeholder="Предмет (например, Алгебра)" required />
+              <input type="text" id="lesRoom" class="input" placeholder="Кабинет или заметка" />
+            </div>
+            <div class="form-row">
+              <input type="url" id="lesUrl" class="input" placeholder="Ссылка на онлайн-урок (Zoom / Meet)" />
+              <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Сохранить урок</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="form-box collapsible-panel" id="panelBulkLesson">
+          <form class="form-grid" onsubmit="handleBulkSchedule(event)">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <span class="card-title">Загрузить расписание списком</span>
+              <label style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+                <input type="checkbox" id="bulkReplaceAll" /> Заменить текущее
+              </label>
+            </div>
+            <textarea id="bulkScheduleText" class="input" placeholder="Понедельник&#10;08:30 Алгебра каб. 204&#10;09:25 Физика"></textarea>
+            <button type="submit" class="btn btn-primary" style="align-self:flex-start;">Разобрать и сохранить</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ================= 3. ДНЕВНЫЕ ЗАДАНИЯ ================= -->
+      <section class="view-pane" id="view-daily">
+        <div class="form-box">
+          <form class="form-grid" onsubmit="handleAddDailyTask(event)">
+            <div class="form-row">
+              <input type="text" id="dailyTitle" class="input" style="flex:2 1 220px;" placeholder="Новое дневное задание..." required />
+              <input type="date" id="dailyDate" class="input" style="flex:0 1 145px;" required />
+              <input type="time" id="dailyTime" class="input" style="flex:0 1 105px;" title="Напоминание (необязательно)" />
+              <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Добавить</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="dailyOverdueSection" class="live-render-zone"></div>
+        <div id="dailyGroupsSection" class="live-render-zone"></div>
+      </section>
+
+      <!-- ================= 4. ОБЩИЕ ПЛАНЫ (ГЛОБАЛЬНОЕ) ================= -->
+      <section class="view-pane" id="view-goals">
+        <div class="form-box">
+          <form class="form-grid" onsubmit="handleAddGlobalGoal(event)">
+            <div class="form-row">
+              <input type="text" id="goalTitle" class="input" style="flex:2 1 240px;" placeholder="Глобальная задача или цель без привязки ко дню..." required />
+              <select id="goalCategory" class="input" style="flex:0 1 140px;">
+                <option value="">Без сферы</option>
+                <option value="Учёба">Учёба</option>
+                <option value="Проекты">Проекты</option>
+                <option value="Личное">Личное</option>
+              </select>
+              <label style="flex:0 0 auto; display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:var(--text-muted); cursor:pointer;">
+                <input type="checkbox" id="goalPriority" /> ★ Важное
+              </label>
+              <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Добавить</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="filter-bar">
+          <div class="pill-group" id="goalFiltersBar">
+            <button class="seg-pill active" data-gf="all" onclick="setGoalFilter('all')">Все</button>
+            <button class="seg-pill" data-gf="priority" onclick="setGoalFilter('priority')">Важные ★</button>
+            <button class="seg-pill" data-gf="Учёба" onclick="setGoalFilter('Учёба')">Учёба</button>
+            <button class="seg-pill" data-gf="Проекты" onclick="setGoalFilter('Проекты')">Проекты</button>
+            <button class="seg-pill" data-gf="Личное" onclick="setGoalFilter('Личное')">Личное</button>
+            <button class="seg-pill" data-gf="done" onclick="setGoalFilter('done')">Готовые</button>
+          </div>
+          <button class="btn btn-ghost" id="btnClearDoneGoals" style="display:none;" onclick="clearDoneGoals()">Удалить готовые</button>
+        </div>
+
+        <div class="card">
+          <div id="goalsListWrap" class="live-render-zone"></div>
+        </div>
+      </section>
+
+      <!-- ================= 5. БАЗА ПРИВЫЧЕК ================= -->
+      <section class="view-pane" id="view-habits">
+        <div class="card card-mb">
+          <div class="card-head">
+            <span class="card-title">Привычки за 14 дней</span>
+            <span class="card-meta">Клик по клетке отмечает день</span>
+          </div>
+          <div id="habitsMatrixCard" class="live-render-zone"></div>
+        </div>
+
+        <div class="filter-bar">
+          <button class="btn btn-primary" onclick="togglePanel('panelAddHabit')">+ Новая привычка</button>
+        </div>
+
+        <div class="form-box collapsible-panel" id="panelAddHabit">
+          <form class="form-grid" onsubmit="handleAddHabit(event)">
+            <div class="card-title">Новая привычка</div>
+            <div class="form-row">
+              <input type="text" id="habTitle" class="input" placeholder="Название (например, Вода, Чтение, Зарядка)" required />
+              <select id="habKind" class="input" onchange="toggleHabitKindFields()">
+                <option value="check">Галочка (да / нет)</option>
+                <option value="value">Число или значение</option>
+              </select>
+            </div>
+            <div class="form-row" id="habValueFields" style="display:none;">
+              <input type="text" id="habTarget" class="input" placeholder="Цель (например, 2 или 25)" />
+              <input type="text" id="habUnit" class="input" placeholder="Единица (л, ч, мин, стр)" />
+            </div>
+            <div>
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Дни недели:</div>
+              <div class="weekday-picker" id="habWeekdays">
+                <span class="wd-pill on" data-d="1" onclick="toggleWdPill(this)">Пн</span>
+                <span class="wd-pill on" data-d="2" onclick="toggleWdPill(this)">Вт</span>
+                <span class="wd-pill on" data-d="3" onclick="toggleWdPill(this)">Ср</span>
+                <span class="wd-pill on" data-d="4" onclick="toggleWdPill(this)">Чт</span>
+                <span class="wd-pill on" data-d="5" onclick="toggleWdPill(this)">Пт</span>
+                <span class="wd-pill on" data-d="6" onclick="toggleWdPill(this)">Сб</span>
+                <span class="wd-pill on" data-d="7" onclick="toggleWdPill(this)">Вс</span>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="align-self:flex-start;">Создать привычку</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ================= 6. БАЗА КНИГ ================= -->
+      <section class="view-pane" id="view-books">
+        <div class="form-box">
+          <form class="form-grid" onsubmit="handleAddBook(event)">
+            <div class="form-row">
+              <input type="text" id="bookTitle" class="input" style="flex:2 1 200px;" placeholder="Название книги..." required />
+              <input type="text" id="bookAuthor" class="input" style="flex:1 1 150px;" placeholder="Автор (необязательно)" />
+              <select id="bookStatus" class="input" style="flex:0 1 145px;">
+                <option value="planned">В планах</option>
+                <option value="reading">Читаю сейчас</option>
+                <option value="done">Прочитана</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <input type="text" id="bookNote" class="input" style="flex:2 1 220px;" placeholder="Заметка или прогресс (например, стр. 120 / 300)" />
+              <select id="bookRating" class="input" style="flex:0 1 125px;">
+                <option value="0">Без оценки</option>
+                <option value="5">★★★★★ (5)</option>
+                <option value="4">★★★★ (4)</option>
+                <option value="3">★★★ (3)</option>
+                <option value="2">★★ (2)</option>
+                <option value="1">★ (1)</option>
+              </select>
+              <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Добавить книгу</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="filter-bar">
+          <div class="pill-group" id="bookFiltersBar">
+            <button class="seg-pill active" data-bf="all" onclick="setBookFilter('all')">Все</button>
+            <button class="seg-pill" data-bf="reading" onclick="setBookFilter('reading')">Читаю сейчас</button>
+            <button class="seg-pill" data-bf="planned" onclick="setBookFilter('planned')">В планах</button>
+            <button class="seg-pill" data-bf="done" onclick="setBookFilter('done')">Прочитано</button>
+          </div>
+          <span class="card-meta">Клик по статусу меняет этап чтения</span>
+        </div>
+
+        <div class="card">
+          <div id="booksListWrap" class="live-render-zone"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- НИЖНЯЯ НАВИГАЦИЯ НА ТЕЛЕФОНЕ (<= 860px) -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-grid" id="mobileNav">
+      <button class="mob-nav-btn active" data-view="overview" onclick="switchView('overview')">
+        <span class="ico">◉</span><span>Обзор</span>
+      </button>
+      <button class="mob-nav-btn" data-view="lessons" onclick="switchView('lessons')">
+        <span class="ico">◷</span><span>Уроки</span>
+      </button>
+      <button class="mob-nav-btn" data-view="daily" onclick="switchView('daily')">
+        <span class="ico">✓</span><span>Задания</span>
+      </button>
+      <button class="mob-nav-btn" data-view="goals" onclick="switchView('goals')">
+        <span class="ico">★</span><span>Планы</span>
+      </button>
+      <button class="mob-nav-btn" data-view="habits" onclick="switchView('habits')">
+        <span class="ico">↻</span><span>Привычки</span>
+      </button>
+      <button class="mob-nav-btn" data-view="books" onclick="switchView('books')">
+        <span class="ico">▤</span><span>Книги</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- СТУДИЯ ОФОРМЛЕНИЯ (16 АНИМЕ-ТЕМ) И НАСТРОЕК -->
+  <div class="studio-backdrop" id="studioModal" onclick="if(event.target===this)closeStudio()">
+    <div class="studio-sheet">
+      <div class="studio-top">
+        <div class="studio-title">
+          <span>Оформление и настройки</span>
+          <span class="studio-save-toast" id="studioToast">● Сохранено</span>
+        </div>
+        <button class="btn" onclick="closeStudio()">Готово ×</button>
+      </div>
+
+      <div class="studio-tabs">
+        <button class="studio-tab-btn active" id="stTabBtnThemes" onclick="switchStudioTab('themes')">
+          Темы и фоны (16)
+        </button>
+        <button class="studio-tab-btn" id="stTabBtnSettings" onclick="switchStudioTab('settings')">
+          Уведомления и боты
+        </button>
+      </div>
+
+      <!-- ВКЛАДКА 1: 16 АНИМЕ-ТЕМ -->
+      <div class="studio-body" id="studioPaneThemes">
+        <div class="tweak-bar">
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Режим палитры</span>
+              <span class="tweak-sub">Светлый или тёмный интерфейс поверх любого арта</span>
+            </div>
+            <div class="pill-group" id="tweakModeGroup">
+              <button class="seg-pill active" data-val="auto" onclick="setUiPref('modeOverride', 'auto')">По арту</button>
+              <button class="seg-pill" data-val="light" onclick="setUiPref('modeOverride', 'light')">Светлый</button>
+              <button class="seg-pill" data-val="dark" onclick="setUiPref('modeOverride', 'dark')">Тёмный</button>
+            </div>
+          </div>
+
+          <div class="tweak-row">
+            <div><span class="tweak-label">Яркость обоев</span></div>
+            <div class="pill-group" id="tweakWatermarkGroup">
+              <button class="seg-pill" data-val="off" onclick="setUiPref('watermarkLevel', 'off')">Выкл</button>
+              <button class="seg-pill" data-val="soft" onclick="setUiPref('watermarkLevel', 'soft')">Мягкий</button>
+              <button class="seg-pill active" data-val="mid" onclick="setUiPref('watermarkLevel', 'mid')">Чёткий</button>
+              <button class="seg-pill" data-val="bright" onclick="setUiPref('watermarkLevel', 'bright')">Яркий</button>
+            </div>
+          </div>
+
+          <div class="tweak-row">
+            <div><span class="tweak-label">Мини-постер в боковом меню</span></div>
+            <div class="pill-group" id="tweakHeroGroup">
+              <button class="seg-pill active" data-val="show" onclick="setUiPref('heroCard', 'show')">Показывать</button>
+              <button class="seg-pill" data-val="hide" onclick="setUiPref('heroCard', 'hide')">Скрыть</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pill-group" id="skinFiltersBar">
+          <button class="seg-pill active" data-cat="all" onclick="filterSkins('all')">Все (16)</button>
+          <button class="seg-pill" data-cat="anime" onclick="filterSkins('anime')">Аниме</button>
+          <button class="seg-pill" data-cat="games" onclick="filterSkins('games')">Игры</button>
+          <button class="seg-pill" data-cat="light" onclick="filterSkins('light')">Светлые</button>
+          <button class="seg-pill" data-cat="dark" onclick="filterSkins('dark')">Тёмные</button>
+        </div>
+
+        <div class="skins-grid" id="skinsGrid"></div>
+      </div>
+
+      <!-- ВКЛАДКА 2: УВЕДОМЛЕНИЯ, ПАУЗА, TELEGRAM И GEMINI -->
+      <div class="studio-body" id="studioPaneSettings" style="display:none;">
+        <div class="tweak-bar">
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Пауза на школьные уроки</span>
+              <span class="tweak-sub">Каникулы или болезнь — отключает только звонки об уроках</span>
+            </div>
+            <button class="btn" id="stPauseLessonsBtn" onclick="toggleSetting('pause_lessons')">Выкл</button>
+          </div>
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Полная тишина</span>
+              <span class="tweak-sub">Отключает все уведомления и замораживает серии привычек</span>
+            </div>
+            <button class="btn" id="stPauseAllBtn" onclick="toggleSetting('pause_all')">Выкл</button>
+          </div>
+        </div>
+
+        <div class="tweak-bar">
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Напоминать до начала урока</span>
+            </div>
+            <div class="pill-group" id="stLeadMinPills">
+              <button class="seg-pill" data-min="1" onclick="quickSaveSetting('lesson_lead_minutes', '1')">1 мин</button>
+              <button class="seg-pill" data-min="2" onclick="quickSaveSetting('lesson_lead_minutes', '2')">2 мин</button>
+              <button class="seg-pill" data-min="3" onclick="quickSaveSetting('lesson_lead_minutes', '3')">3 мин</button>
+              <button class="seg-pill" data-min="5" onclick="quickSaveSetting('lesson_lead_minutes', '5')">5 мин</button>
+              <button class="seg-pill" data-min="10" onclick="quickSaveSetting('lesson_lead_minutes', '10')">10 мин</button>
+              <button class="seg-pill" data-min="15" onclick="quickSaveSetting('lesson_lead_minutes', '15')">15 мин</button>
+            </div>
+          </div>
+
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Цикл расписания</span>
+            </div>
+            <div class="pill-group" id="stWeekModePills">
+              <button class="seg-pill" data-wm="1" onclick="quickSaveSetting('week_cycle_mode', '1')">1 неделя</button>
+              <button class="seg-pill" data-wm="2" onclick="quickSaveSetting('week_cycle_mode', '2')">2 недели</button>
+            </div>
+          </div>
+
+          <div class="tweak-row">
+            <div><span class="tweak-label">Утренняя сводка до урока</span></div>
+            <div class="pill-group" id="stMorningOffsetPills">
+              <button class="seg-pill" data-mo="15" onclick="quickSaveSetting('morning_digest_offset_min', '15')">15 мин</button>
+              <button class="seg-pill" data-mo="30" onclick="quickSaveSetting('morning_digest_offset_min', '30')">30 мин</button>
+              <button class="seg-pill" data-mo="45" onclick="quickSaveSetting('morning_digest_offset_min', '45')">45 мин</button>
+              <button class="seg-pill" data-mo="60" onclick="quickSaveSetting('morning_digest_offset_min', '60')">60 мин</button>
+            </div>
+          </div>
+
+          <div class="tweak-row">
+            <div><span class="tweak-label">Вечерняя проверка привычек</span></div>
+            <div class="pill-group" id="stEveningTimePills">
+              <button class="seg-pill" data-et="20:00" onclick="quickSaveSetting('evening_habits_time', '20:00')">20:00</button>
+              <button class="seg-pill" data-et="21:00" onclick="quickSaveSetting('evening_habits_time', '21:00')">21:00</button>
+              <button class="seg-pill" data-et="22:00" onclick="quickSaveSetting('evening_habits_time', '22:00')">22:00</button>
+              <button class="seg-pill" data-et="23:00" onclick="quickSaveSetting('evening_habits_time', '23:00')">23:00</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tweak-bar">
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Telegram-бот (по желанию)</span>
+              <span class="tweak-sub" id="stBotTokenStatus">Проверка статуса...</span>
+            </div>
+            <a class="btn" href="https://t.me/BotFather" target="_blank">@BotFather →</a>
+          </div>
+          <form class="form-row" onsubmit="saveBotTokenForm(event)">
+            <input type="password" id="setBotToken" class="input" placeholder="Токен бота от @BotFather" />
+            <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Подключить</button>
+          </form>
+        </div>
+
+        <div class="tweak-bar">
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Распознавание фото и голоса (Google Gemini)</span>
+              <span class="tweak-sub" id="stGeminiStatus">Проверка статуса...</span>
+            </div>
+            <a class="btn" href="https://aistudio.google.com/apikey" target="_blank">Взять ключ →</a>
+          </div>
+          <form class="form-row" onsubmit="saveGeminiKeyForm(event)">
+            <input type="password" id="setGeminiKey" class="input" placeholder="Ключ AIza..." />
+            <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Сохранить ключ</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessKey = urlParams.get('k') || '';
+
+    // ================= 16 АНИМЕ-ТЕМ (СОХРАНЕНЫ БЕЗ ИЗМЕНЕНИЙ) =================
+    const SKINS = [
+      {
+        id: 'goth-skull',
+        name: 'Готика · Черепа',
+        sub: 'Контрастная манга',
+        category: ['anime', 'light'],
+        mode: 'light',
+        img: '/gallery/art-02.jpg',
+        cropPos: '50% 14%',
+        colors: { bg: '#f5f4f8', surface: '#ffffff', text: '#15141b', textMuted: '#666375', pink: '#e11d74', amber: '#f59e0b' },
+        quotes: [
+          'Напомню об уроке за 2 минуты. Все 5 разделов на месте и синхронизированы.',
+          'Незакрытые дела не пропадают — просто перекидывай их на сегодня.',
+          'Уроки, задания, глобальные планы, привычки и книги — без лишнего шума.',
+        ],
+      },
+      {
+        id: 'ellen-zzz',
+        name: 'Эллен Джо · ZZZ',
+        sub: 'Алый драйв Виктории',
+        category: ['anime', 'games', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-10.png',
+        cropPos: '24% 16%',
+        colors: { bg: '#110a0f', surface: '#1b1118', text: '#fdf2f7', textMuted: '#b89aa9', pink: '#ff2e63', amber: '#f8fafc' },
+        quotes: [
+          'Быстрее закроем уроки и задания — быстрее пойдём отдыхать и читать.',
+          'Если сегодня каникулы — жми паузу, и никто тебя не побеспокоит.',
+        ],
+      },
+      {
+        id: 'yumeko-kakegurui',
+        name: 'Юмэко · Азарт',
+        sub: 'Кровавый джокер',
+        category: ['anime', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-05.jpg',
+        cropPos: '24% 18%',
+        colors: { bg: '#0c0914', surface: '#161124', text: '#f8f5ff', textMuted: '#a39bb8', pink: '#e11d48', amber: '#06b6d4' },
+        quotes: [
+          'Сделаем ставку на то, что ты закроешь все задания и привычки за сегодня? ♠',
+          'За 2 минуты до урока я сдам карты. Не опаздывай.',
+        ],
+      },
+      {
+        id: 'terrorblade-sakura',
+        name: 'Сакура и Тушь',
+        sub: 'Свиток Террорблейда',
+        category: ['games', 'anime', 'light'],
+        mode: 'light',
+        img: '/gallery/art-15.jpg',
+        cropPos: '50% 18%',
+        colors: { bg: '#faf7f5', surface: '#ffffff', text: '#161314', textMuted: '#6e6265', pink: '#d9385e', amber: '#8c7a7b' },
+        quotes: [
+          'Тишина и порядок. Все разделы разложены ровно по своим местам.',
+          'Каждая отмеченная привычка закаляет серию дней.',
+        ],
+      },
+      {
+        id: 'vergil-yamato',
+        name: 'Вергилий · Ямато',
+        sub: 'Холодная сталь DMC',
+        category: ['games', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-16.jpg',
+        cropPos: '40% 20%',
+        colors: { bg: '#080a0f', surface: '#11151f', text: '#eef4ff', textMuted: '#8b9bb4', pink: '#38bdf8', amber: '#cbd5e1' },
+        quotes: [
+          'Where is your motivation? Урок через 2 минуты — не трать время впустую.',
+          'Дисциплина в привычках и глобальных целях решает всё.',
+        ],
+      },
+      {
+        id: 'cc-code-geass',
+        name: 'C.C. · Код Гиас',
+        sub: 'Изумрудный контракт',
+        category: ['anime', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-03.jpg',
+        cropPos: '72% 18%',
+        colors: { bg: '#0a0f0c', surface: '#121c16', text: '#f0fdf4', textMuted: '#8da896', pink: '#84cc16', amber: '#f59e0b' },
+        quotes: [
+          'Наш контракт прост: я слежу за расписанием и планами, а ты не пропускаешь уроки.',
+          'Серия привычек заморожена на время паузы. Контракт в силе.',
+        ],
+      },
+      {
+        id: 'gothic-miku-feathers',
+        name: 'Чёрные перья',
+        sub: 'Мятная готика',
+        category: ['anime', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-17.png',
+        cropPos: '76% 18%',
+        colors: { bg: '#080e11', surface: '#101a20', text: '#ecfeff', textMuted: '#86a6b0', pink: '#2dd4bf', amber: '#e2e8f0' },
+        quotes: [
+          'За 2 минуты до урока прилетит напоминание. Всё расписание под контролем.',
+          'Включи паузу, если сегодня день тишины и отдыха.',
+        ],
+      },
+      {
+        id: 'cyber-rave-miku',
+        name: 'Кибер-рейв · Неон',
+        sub: 'Бирюза и пурпур',
+        category: ['anime', 'games', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-13.png',
+        cropPos: '22% 18%',
+        colors: { bg: '#110917', surface: '#1b1025', text: '#fdf4ff', textMuted: '#b095c2', pink: '#ec4899', amber: '#22d3ee' },
+        quotes: [
+          'Ритм дня настроен: уроки, планы, привычки и книги синхронизированы!',
+          'До урока 2 минуты — подключайся в один клик.',
+        ],
+      },
+      {
+        id: 'chocola-maid',
+        name: 'Шоколадный Неко',
+        sub: 'Тёплый пастельный крем',
+        category: ['anime', 'light'],
+        mode: 'light',
+        img: '/gallery/art-18.png',
+        cropPos: '68% 18%',
+        colors: { bg: '#fff7f9', surface: '#ffffff', text: '#382229', textMuted: '#8a6973', pink: '#e11d74', amber: '#f472b6' },
+        quotes: [
+          'Добро пожаловать! Уроки, задания, привычки и книги разложены по полочкам.',
+          'Не забудь отметить вечерние привычки, чтобы копилась серия.',
+        ],
+      },
+      {
+        id: 'pink-demon-lolita',
+        name: 'Розовый Демон',
+        sub: 'Готик-лолита и цепи',
+        category: ['anime', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-09.jpg',
+        cropPos: '34% 20%',
+        colors: { bg: '#140b14', surface: '#211221', text: '#fdf2f8', textMuted: '#b894b6', pink: '#f472b6', amber: '#c084fc' },
+        quotes: [
+          'Уроки сами себя не посетят — за 2 минуты до звонка жди сигнал.',
+          'На каникулах серии привычек под защитой паузы.',
+        ],
+      },
+      {
+        id: 'night-neko-stripes',
+        name: 'Ночная Неко',
+        sub: 'Глубокий OLED и розовый',
+        category: ['anime', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-11.png',
+        cropPos: '82% 20%',
+        colors: { bg: '#060609', surface: '#111118', text: '#f5f3ff', textMuted: '#938fa8', pink: '#ec4899', amber: '#a855f7' },
+        quotes: [
+          'Ночной режим включён. Глазам комфортно, расписание и книги под присмотром.',
+        ],
+      },
+      {
+        id: 'pink-poker-cards',
+        name: 'Розовый Покер',
+        sub: 'Неоновая колода карт',
+        category: ['games', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-14.png',
+        cropPos: '50% 50%',
+        colors: { bg: '#100912', surface: '#1a0f1e', text: '#fdf2fb', textMuted: '#b594b0', pink: '#f472b6', amber: '#e879f9' },
+        quotes: [
+          'Все козыри на руках: расписание, дневные задания, цели, привычки и книги ♠ ♥',
+        ],
+      },
+      {
+        id: 'marston-acid-western',
+        name: 'Марстон · Вестерн',
+        sub: 'Кислотное золото и гранж',
+        category: ['games', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-06.jpg',
+        cropPos: '72% 24%',
+        colors: { bg: '#11120c', surface: '#1b1c12', text: '#fefce8', textMuted: '#a8a686', pink: '#ec4899', amber: '#22c55e' },
+        quotes: [
+          'За 2 минуты до урока дам знать. Держи дела и расписание в порядке.',
+        ],
+      },
+      {
+        id: 'mechagenda-biomech',
+        name: 'Мехагенда · CRT',
+        sub: 'Индустриальный биомех',
+        category: ['games', 'dark'],
+        mode: 'dark',
+        img: '/gallery/art-08.jpg',
+        cropPos: '50% 35%',
+        colors: { bg: '#0c0d0b', surface: '#151713', text: '#e6eadf', textMuted: '#8d9483', pink: '#a3b18a', amber: '#d97706' },
+        quotes: [
+          'Система активна. Синхронизация между компьютером и Telegram работает.',
+        ],
+      },
+      {
+        id: 'joker-noir',
+        name: 'Джокер · Нуар',
+        sub: 'Чёрно-белая плёнка',
+        category: ['dark'],
+        mode: 'dark',
+        img: '/gallery/art-01.jpg',
+        cropPos: '50% 24%',
+        colors: { bg: '#0a0a0b', surface: '#141416', text: '#f4f4f5', textMuted: '#909096', pink: '#e4e4e7', amber: '#a1a1aa' },
+        quotes: [
+          'У тебя же есть план на сегодня? Всё разложено чисто и без хаоса.',
+        ],
+      },
+      {
+        id: 'strict-minimal',
+        name: 'Строгий минимализм',
+        sub: 'Чистый лист без артов',
+        category: ['light'],
+        mode: 'light',
+        img: '',
+        cropPos: '50% 50%',
+        colors: { bg: '#fafafa', surface: '#ffffff', text: '#111111', textMuted: '#6e6e6e', pink: '#111111', amber: '#111111' },
+        quotes: [
+          'Чистый минималистичный режим: только дела, расписание, привычки и книги.',
+        ],
+      },
+    ];
+
+    let UI_PREFS = {
+      skinId: 'goth-skull',
+      modeOverride: 'auto',
+      watermarkLevel: 'mid',
+      heroCard: 'show',
+      filterCat: 'all',
+    };
+
+    let STATE = {
+      todayStr: '',
+      nowTimeStr: '',
+      isoDay: 1,
+      weekType: 1,
+      selectedDayTab: 1,
+      activeView: 'overview',
+      goalFilter: 'all',
+      bookFilter: 'all',
+      editingBookId: null,
+      settings: {},
+      todayLessons: [],
+      allLessons: [],
+      todayHabits: [],
+      habitsGrid: { dates: [], habits: [] },
+      overduePlans: [],
+      todayPlans: [],
+      upcomingPlans: [],
+      globalPlans: [],
+      books: [],
+    };
+
+    const DAY_NAMES = {
+      1: 'Понедельник', 2: 'Вторник', 3: 'Среда', 4: 'Четверг',
+      5: 'Пятница', 6: 'Суббота', 7: 'Воскресенье',
+    };
+    const DAY_SHORT = { 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб', 7: 'Вс' };
+    const VIEW_TITLES = {
+      overview: 'Обзор дня',
+      lessons: 'Школьное расписание',
+      daily: 'Дневные задания',
+      goals: 'Общие планы',
+      habits: 'База привычек',
+      books: 'База книг',
+    };
+
+    let quoteIdx = 0;
+
+    function escapeHtml(str = '') {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function formatHumanDate(dateStr) {
+      if (!dateStr) return '';
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const months = [
+        'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+      ];
+      return `${d} ${months[m - 1] || ''}`;
+    }
+
+    function formatShortDM(dateStr) {
+      const m = String(dateStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return m ? `${m[3]}.${m[2]}` : dateStr;
+    }
+
+    function bookStatusLabel(st) {
+      if (st === 'reading') return 'Читаю сейчас';
+      if (st === 'done') return 'Прочитана';
+      return 'В планах';
+    }
+
+    // ================= АНИМЕ-ТЕМЫ =================
+    function loadUiPrefs() {
+      try {
+        const raw = localStorage.getItem('assistant_ui_prefs_v4') || localStorage.getItem('assistant_ui_prefs_v3');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          UI_PREFS = { ...UI_PREFS, ...parsed };
+          if (!['off', 'soft', 'mid', 'bright'].includes(UI_PREFS.watermarkLevel)) {
+            UI_PREFS.watermarkLevel = 'mid';
+          }
+        }
+      } catch {}
+      if (!SKINS.some((s) => s.id === UI_PREFS.skinId)) {
+        UI_PREFS.skinId = SKINS[0].id;
+      }
+      applyCurrentSkin();
+    }
+
+    function saveUiPrefs() {
+      try {
+        localStorage.setItem('assistant_ui_prefs_v4', JSON.stringify(UI_PREFS));
+      } catch {}
+    }
+
+    function getCurrentSkin() {
+      return SKINS.find((s) => s.id === UI_PREFS.skinId) || SKINS[0];
+    }
+
+    function applyCurrentSkin() {
+      const skin = getCurrentSkin();
+      const effectiveMode = UI_PREFS.modeOverride === 'auto' ? skin.mode : UI_PREFS.modeOverride;
+
+      let c = { ...skin.colors };
+      if (effectiveMode === 'light' && skin.mode === 'dark') {
+        c.bg = '#f5f4f8'; c.surface = '#ffffff'; c.text = '#15141b'; c.textMuted = '#666375';
+      } else if (effectiveMode === 'dark' && skin.mode === 'light') {
+        c.bg = '#0b0b10'; c.surface = '#14141d'; c.text = '#f3f2f7'; c.textMuted = '#9694a8';
+      }
+
+      const hexToRgb = (hex) => {
+        const clean = String(hex || '').replace('#', '');
+        if (clean.length !== 6) return [20, 20, 28];
+        return [parseInt(clean.slice(0, 2), 16), parseInt(clean.slice(2, 4), 16), parseInt(clean.slice(4, 6), 16)];
+      };
+      const getContrastFg = (hex) => {
+        const [r, g, b] = hexToRgb(hex);
+        return (r * 299 + g * 587 + b * 114) / 1000 >= 150 ? '#0c0c11' : '#ffffff';
+      };
+
+      const [bgR, bgG, bgB] = hexToRgb(c.bg);
+      const [sfR, sfG, sfB] = hexToRgb(c.surface);
+      const [acR, acG, acB] = hexToRgb(c.pink);
+      const accentFg = getContrastFg(c.pink);
+
+      const scrimAlphas = { off: 1, soft: 0.80, mid: 0.64, bright: 0.34 };
+      const level = skin.img ? (UI_PREFS.watermarkLevel || 'mid') : 'off';
+      const scrimAlpha = scrimAlphas[level] ?? 0.64;
+
+      const root = document.documentElement;
+      root.style.setProperty('--bg', c.bg);
+      root.style.setProperty('--surface', c.surface);
+      root.style.setProperty('--surface-glass', `rgba(${sfR}, ${sfG}, ${sfB}, ${level === 'off' ? 0.98 : effectiveMode === 'dark' ? 0.84 : 0.89})`);
+      root.style.setProperty('--sidebar-glass', `rgba(${sfR}, ${sfG}, ${sfB}, ${level === 'off' ? 0.99 : effectiveMode === 'dark' ? 0.90 : 0.93})`);
+      root.style.setProperty('--header-glass', `rgba(${sfR}, ${sfG}, ${sfB}, ${level === 'off' ? 0.97 : effectiveMode === 'dark' ? 0.82 : 0.88})`);
+      root.style.setProperty('--surface-2', effectiveMode === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(20,20,28,0.05)');
+      root.style.setProperty('--text', c.text);
+      root.style.setProperty('--text-muted', c.textMuted);
+      root.style.setProperty('--text-faint', effectiveMode === 'dark' ? 'rgba(243,242,247,0.42)' : 'rgba(20,20,24,0.40)');
+      root.style.setProperty('--glass-border', effectiveMode === 'dark' ? 'rgba(255,255,255,0.10)' : 'rgba(20,20,28,0.09)');
+      root.style.setProperty('--divider', effectiveMode === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(20,20,28,0.065)');
+      root.style.setProperty('--accent', c.pink);
+      root.style.setProperty('--accent-fg', accentFg);
+      root.style.setProperty('--accent-soft', `rgba(${acR}, ${acG}, ${acB}, 0.14)`);
+      root.style.setProperty('--soft-shadow', effectiveMode === 'dark' ? '0 10px 30px rgba(0,0,0,0.36)' : '0 8px 26px rgba(20,20,30,0.06)');
+
+      const imgUrl = skin.img ? `${skin.img}?v=hd4` : '';
+      root.style.setProperty('--wallpaper-display', !imgUrl || level === 'off' ? 'none' : 'block');
+      root.style.setProperty('--wallpaper-url', imgUrl ? `url('${imgUrl}')` : 'none');
+      root.style.setProperty('--wallpaper-pos', skin.cropPos || '50% 18%');
+      root.style.setProperty('--scrim-bg', `rgba(${bgR}, ${bgG}, ${bgB}, ${scrimAlpha})`);
+
+      renderHeroArt();
+      renderStudioThemes();
+    }
+
+    function renderHeroArt() {
+      const skin = getCurrentSkin();
+      const card = document.getElementById('sideAnimeCard');
+      const poster = document.getElementById('sideAnimePoster');
+      const nameEl = document.getElementById('sideSkinName');
+      const mobSub = document.getElementById('mobSkinSub');
+      const topBtn = document.getElementById('topSkinBtn');
+      const mobImg = document.getElementById('mobArtImg');
+      const quoteEl = document.getElementById('heroQuote');
+
+      if (card) card.classList.toggle('hidden-art', UI_PREFS.heroCard === 'hide' || !skin.img);
+      if (nameEl) nameEl.textContent = skin.name;
+      if (mobSub) mobSub.textContent = skin.name;
+      if (topBtn) topBtn.textContent = skin.name.split('·')[0].trim();
+
+      if (skin.img) {
+        const src = `${skin.img}?v=hd4`;
+        if (poster) {
+          poster.innerHTML = `<img id="heroArtImg" src="${src}" alt="${escapeHtml(skin.name)}" style="object-position:${skin.cropPos || '50% 18%'};" />`;
+        }
+        if (mobImg) {
+          mobImg.src = src;
+          mobImg.style.display = 'block';
+          mobImg.style.objectPosition = skin.cropPos || '50% 18%';
+        }
+      } else {
+        if (poster) poster.innerHTML = `<div class="anime-poster-fallback">Минимализм</div>`;
+        if (mobImg) mobImg.style.display = 'none';
+      }
+
+      if (quoteEl && skin.quotes && skin.quotes.length) {
+        quoteEl.textContent = skin.quotes[quoteIdx % skin.quotes.length];
+      }
+    }
+
+    function cycleHeroQuote() {
+      quoteIdx++;
+      renderHeroArt();
+    }
+
+    function stepSkin(delta) {
+      const idx = SKINS.findIndex((s) => s.id === UI_PREFS.skinId);
+      const next = (idx + delta + SKINS.length) % SKINS.length;
+      UI_PREFS.skinId = SKINS[next].id;
+      quoteIdx = 0;
+      saveUiPrefs();
+      applyCurrentSkin();
+    }
+
+    function selectSkin(id) {
+      UI_PREFS.skinId = id;
+      quoteIdx = 0;
+      saveUiPrefs();
+      applyCurrentSkin();
+      flashStudioToast('● Тема применена');
+    }
+
+    function setUiPref(key, val) {
+      UI_PREFS[key] = val;
+      saveUiPrefs();
+      applyCurrentSkin();
+      flashStudioToast('● Сохранено');
+    }
+
+    function filterSkins(cat) {
+      UI_PREFS.filterCat = cat;
+      renderStudioThemes();
+    }
+
+    // ================= API И ЖИВАЯ СИНХРОНИЗАЦИЯ =================
+    async function api(url, body = null) {
+      const headers = {};
+      if (accessKey) headers['X-Access-Key'] = accessKey;
+      const opts = { method: body ? 'POST' : 'GET', headers };
+      if (body) {
+        headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+      }
+      const sep = url.includes('?') ? '&' : '?';
+      const finalUrl = accessKey ? `${url}${sep}k=${encodeURIComponent(accessKey)}` : url;
+      const res = await fetch(finalUrl, opts);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+
+    let lastStateSig = '';
+    let isPollingState = false;
+
+    async function loadState(preserveDay = true, silent = false) {
+      if (silent) {
+        if (isPollingState) return;
+        const active = document.activeElement;
+        if (active && active.closest && active.closest('.live-render-zone')) return;
+      }
+      isPollingState = true;
+      try {
+        const data = await api('/api/state');
+        const sig = JSON.stringify(data);
+        const firstLoad = !STATE.todayStr;
+        if (silent && !firstLoad && sig === lastStateSig) return;
+        lastStateSig = sig;
+        STATE = {
+          ...STATE,
+          ...data,
+          selectedDayTab: firstLoad || !preserveDay ? data.isoDay : STATE.selectedDayTab,
+        };
+        const dateInput = document.getElementById('dailyDate');
+        if (dateInput && !dateInput.value) dateInput.value = STATE.todayStr;
+        renderAll();
+      } catch (err) {
+        document.getElementById('hdrSub').textContent = err.message;
+      } finally {
+        isPollingState = false;
+      }
+    }
+
+    // ================= НАВИГАЦИЯ =================
+    function switchView(viewId) {
+      STATE.activeView = viewId;
+      document.querySelectorAll('.view-pane').forEach((el) => el.classList.remove('active'));
+      const target = document.getElementById(`view-${viewId}`);
+      if (target) target.classList.add('active');
+
+      document.querySelectorAll('.side-btn, .mob-nav-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.getAttribute('data-view') === viewId);
+      });
+      renderHeader();
+    }
+
+    function toggleQuickDrawer(force) {
+      const box = document.getElementById('quickDrawer');
+      const next = typeof force === 'boolean' ? force : !box.classList.contains('open');
+      box.classList.toggle('open', next);
+      if (next) {
+        setTimeout(() => document.getElementById('quickInput')?.focus(), 50);
+      }
+    }
+
+    function togglePanel(id, closeOtherId = '') {
+      if (closeOtherId) document.getElementById(closeOtherId)?.classList.remove('open');
+      document.getElementById(id)?.classList.toggle('open');
+    }
+
+    function showToast(text, actionsHtml = '') {
+      const banner = document.getElementById('guessBanner');
+      document.getElementById('guessText').textContent = text;
+      document.getElementById('guessActions').innerHTML = actionsHtml;
+      banner.classList.add('show');
+      if (!actionsHtml) {
+        clearTimeout(window._toastTmr);
+        window._toastTmr = setTimeout(hideGuessBanner, 3200);
+      }
+    }
+
+    function hideGuessBanner() {
+      document.getElementById('guessBanner').classList.remove('show');
+    }
+
+    // ================= РЕНДЕР ВСЕГО ЭКРАНА =================
+    function renderAll() {
+      renderHeader();
+      renderSidebarCounts();
+      renderOverview();
+      renderLessonsView();
+      renderDailyView();
+      renderGoalsView();
+      renderHabitsView();
+      renderBooksView();
+      renderStudioSettingsState();
+    }
+
+    function renderHeader() {
+      const s = STATE.settings || {};
+      const dateStr = STATE.todayStr ? `${DAY_NAMES[STATE.isoDay]}, ${formatHumanDate(STATE.todayStr)}` : 'Сегодня';
+      const titleEl = document.getElementById('hdrDate');
+      const subEl = document.getElementById('hdrSub');
+      const mobTitle = document.getElementById('mobDateTitle');
+
+      if (mobTitle) mobTitle.textContent = STATE.activeView === 'overview' ? dateStr : (VIEW_TITLES[STATE.activeView] || dateStr);
+
+      if (STATE.activeView === 'overview') {
+        titleEl.textContent = dateStr;
+        const activeLessons = (STATE.todayLessons || []).filter((l) => !l.is_cancelled_today).length;
+        const openDaily = (STATE.todayPlans || []).filter((p) => !p.is_done).length;
+        const overdueCnt = (STATE.overduePlans || []).length;
+        const parts = [];
+        parts.push(activeLessons ? `Уроков: ${activeLessons}` : 'Уроков нет');
+        parts.push(openDaily ? `Заданий осталось: ${openDaily}` : 'Задания закрыты');
+        if (overdueCnt) parts.push(`С прошлых дней: ${overdueCnt}`);
+        if (s.week_cycle_mode === '2') parts.push(STATE.weekType === 1 ? 'Верхняя нед.' : 'Нижняя нед.');
+        subEl.textContent = parts.join(' · ');
+      } else {
+        titleEl.textContent = VIEW_TITLES[STATE.activeView] || dateStr;
+        subEl.textContent = dateStr;
+      }
+
+      const pauseBtn = document.getElementById('btnPausePill');
+      if (pauseBtn) {
+        if (s.pause_all === '1') {
+          pauseBtn.textContent = '× Полная тишина';
+          pauseBtn.classList.add('paused');
+        } else if (s.pause_lessons === '1') {
+          pauseBtn.textContent = '◐ Пауза уроков';
+          pauseBtn.classList.add('paused');
+        } else {
+          pauseBtn.textContent = s.has_bot_token ? '● Бот на связи' : '● Активен';
+          pauseBtn.classList.remove('paused');
+        }
+      }
+    }
+
+    function renderSidebarCounts() {
+      const activeLessons = (STATE.todayLessons || []).filter((l) => !l.is_cancelled_today).length;
+      const openDaily = (STATE.todayPlans || []).filter((p) => !p.is_done).length;
+      const overdueCnt = (STATE.overduePlans || []).length;
+      const openGoals = (STATE.globalPlans || []).filter((g) => !g.is_done).length;
+      const habs = (STATE.todayHabits || []).filter((h) => h.scheduled_today);
+      const doneHabs = habs.filter((h) => h.log_status === 'done').length;
+
+      document.getElementById('cntLessons').textContent = activeLessons ? `${activeLessons} ур.` : '—';
+      const cntDaily = document.getElementById('cntDaily');
+      cntDaily.textContent = overdueCnt ? `${openDaily} (+${overdueCnt})` : String(openDaily);
+      cntDaily.classList.toggle('alert', overdueCnt > 0);
+      document.getElementById('cntGoals').textContent = String(openGoals);
+      document.getElementById('cntHabits').textContent = habs.length ? `${doneHabs}/${habs.length}` : '0';
+      document.getElementById('cntBooks').textContent = String((STATE.books || []).length);
+    }
+
+    // ================= 1. РЕНДЕР: ОБЗОР ДНЯ (BENTO) =================
+    function renderOverview() {
+      // 1) Уроки сегодня
+      const lessons = STATE.todayLessons || [];
+      const activeLessons = lessons.filter((l) => !l.is_cancelled_today).length;
+      document.getElementById('ovLessonsMeta').textContent =
+        STATE.settings.pause_lessons === '1' || STATE.settings.pause_all === '1'
+          ? 'На паузе'
+          : activeLessons
+          ? `${activeLessons} ур.`
+          : '';
+      const ovLessons = document.getElementById('ovLessonsList');
+      if (lessons.length === 0) {
+        ovLessons.innerHTML = `<div class="empty-line">Сегодня уроков нет</div>`;
+      } else {
+        ovLessons.innerHTML = lessons
+          .map((l) => {
+            const off = l.is_cancelled_today;
+            const room = l.room_or_note ? escapeHtml(l.room_or_note) : '';
+            const rightPart =
+              l.join_url && !off
+                ? `<a class="badge accent" style="text-decoration:none;" href="${escapeHtml(l.join_url)}" target="_blank">Войти →</a>`
+                : room
+                ? `<span class="badge">${room}</span>`
+                : '';
+            return `
+              <div class="row-item">
+                <div class="row-left">
+                  <span class="time-col">${escapeHtml(l.start_time)}</span>
+                  <span class="lesson-dot ${off ? 'off' : ''}"></span>
+                  <div class="row-main">
+                    <div class="row-title ${off ? 'done' : ''}">${escapeHtml(l.subject)}</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  ${rightPart}
+                  <button class="btn btn-ghost" onclick="toggleCancelLesson(${l.id})" title="${off ? 'Вернуть' : 'Отменить на сегодня'}">${off ? '↺' : '×'}</button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      // 2) Просроченные + Дневные задания сегодня
+      const overdue = STATE.overduePlans || [];
+      const ovOverdue = document.getElementById('ovOverdueBox');
+      if (overdue.length === 0) {
+        ovOverdue.innerHTML = '';
+      } else {
+        ovOverdue.innerHTML = `
+          <div class="overdue-box">
+            <div class="overdue-head">
+              <span>С прошлых дней: ${overdue.length}</span>
+              <button class="btn-link" onclick="moveAllOverdue()">Перенести все на сегодня</button>
+            </div>
+            ${overdue
+              .slice(0, 3)
+              .map(
+                (o) => `
+              <div class="row-item" style="padding:7px 16px;">
+                <div class="row-left">
+                  <button class="check-btn" onclick="togglePlan(${o.id})" title="Закрыть">✓</button>
+                  <div class="row-main">
+                    <div class="row-title">${escapeHtml(o.title)}</div>
+                    <div class="row-sub">от ${formatShortDM(o.plan_date)}</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <button class="badge clickable" onclick="movePlanToday(${o.id})">На сегодня</button>
+                </div>
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+        `;
+      }
+
+      const daily = STATE.todayPlans || [];
+      const doneDaily = daily.filter((p) => p.is_done).length;
+      document.getElementById('ovDailyMeta').textContent = daily.length ? `${doneDaily} из ${daily.length}` : '';
+      const ovDaily = document.getElementById('ovDailyList');
+      if (daily.length === 0) {
+        ovDaily.innerHTML = `<div class="empty-line">На сегодня заданий нет — добавьте строкой ниже</div>`;
+      } else {
+        ovDaily.innerHTML = daily
+          .map(
+            (p) => `
+          <div class="row-item">
+            <div class="row-left">
+              <button class="check-btn ${p.is_done ? 'checked' : ''}" onclick="togglePlan(${p.id})">✓</button>
+              <div class="row-main">
+                <div class="row-title ${p.is_done ? 'done' : ''}">${escapeHtml(p.title)}</div>
+              </div>
+            </div>
+            <div class="row-right">
+              ${p.remind_time ? `<span class="time-col" style="text-align:right;">${escapeHtml(p.remind_time)}</span>` : ''}
+              <button class="btn btn-ghost" onclick="deletePlanItem(${p.id})" title="Удалить">×</button>
+            </div>
+          </div>
+        `
+          )
+          .join('');
+      }
+
+      // 3) Общие планы (глобальные — сначала важные)
+      const globals = (STATE.globalPlans || []).filter((g) => !g.is_done);
+      const ovGoals = document.getElementById('ovGoalsList');
+      if (globals.length === 0) {
+        ovGoals.innerHTML = `<div class="empty-line">Глобальных планов пока нет</div>`;
+      } else {
+        ovGoals.innerHTML = globals
+          .slice(0, 5)
+          .map(
+            (g) => `
+          <div class="row-item">
+            <div class="row-left">
+              <button class="check-btn ${g.is_done ? 'checked' : ''}" onclick="togglePlan(${g.id})">✓</button>
+              <div class="row-main">
+                <div class="row-title">${g.is_priority ? '<span style="color:#f59e0b;margin-right:4px;">★</span>' : ''}${escapeHtml(g.title)}</div>
+              </div>
+            </div>
+            <div class="row-right">
+              ${g.category ? `<span class="badge">${escapeHtml(g.category)}</span>` : ''}
+              <button class="badge clickable" onclick="takeGoalToToday(${g.id})" title="Создать дневное задание на сегодня">В день</button>
+            </div>
+          </div>
+        `
+          )
+          .join('');
+      }
+
+      // 4) Привычки сегодня
+      const habs = (STATE.todayHabits || []).filter((h) => h.scheduled_today);
+      const doneHabs = habs.filter((h) => h.log_status === 'done').length;
+      document.getElementById('ovHabitsMeta').textContent = habs.length ? `${doneHabs}/${habs.length}` : '';
+      const ovHabs = document.getElementById('ovHabitsWrap');
+      if (habs.length === 0) {
+        ovHabs.innerHTML = `<div class="empty-line">Привычек на сегодня нет</div>`;
+      } else {
+        const chipsHtml = habs
+          .map((h) => {
+            const on = h.log_status === 'done';
+            const valPart = h.log_value ? ` · ${escapeHtml(h.log_value)}` : h.target_value ? ` (цель ${escapeHtml(`${h.target_value} ${h.unit}`.trim())})` : '';
+            return `<button class="habit-chip ${on ? 'on' : ''}" onclick="toggleHabitToday(${h.id})">${on ? '✓' : '○'} ${escapeHtml(h.title)}${valPart}</button>`;
+          })
+          .join('');
+        const valueHabs = habs.filter((h) => h.kind === 'value');
+        const valueRowsHtml = valueHabs
+          .map(
+            (h) => `
+          <div class="habit-val-row">
+            <span style="font-size:12.5px; color:var(--text-muted);">${escapeHtml(h.title)}${h.target_value ? ` · цель ${escapeHtml(`${h.target_value} ${h.unit}`.trim())}` : ''}</span>
+            <input
+              type="text"
+              class="input"
+              style="width:105px; padding:5px 8px; font-size:12px;"
+              placeholder="${escapeHtml(h.unit || 'значение')}"
+              value="${escapeHtml(h.log_value || '')}"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();saveHabitValue(${h.id}, this.value);}"
+              onblur="saveHabitValue(${h.id}, this.value)"
+            />
+          </div>
+        `
+          )
+          .join('');
+        ovHabs.innerHTML = `<div class="habit-chips">${chipsHtml}</div>${valueRowsHtml}`;
+      }
+
+      // 5) Книги (Читаю сейчас + счётчики)
+      const books = STATE.books || [];
+      const reading = books.filter((b) => b.status === 'reading');
+      const planned = books.filter((b) => b.status === 'planned');
+      const done = books.filter((b) => b.status === 'done');
+      const ovBooks = document.getElementById('ovBooksWrap');
+      if (books.length === 0) {
+        ovBooks.innerHTML = `<div class="empty-line">Полка книг пуста — добавьте первую книгу</div>`;
+      } else {
+        const readRows = reading
+          .slice(0, 2)
+          .map(
+            (b) => `
+          <div class="row-item">
+            <div class="row-main">
+              <div class="row-title" style="font-weight:600;">${escapeHtml(b.title)}</div>
+              <div class="row-sub">${escapeHtml(b.author || 'Автор не указан')}${b.note ? ` · ${escapeHtml(b.note)}` : ''}</div>
+            </div>
+            <button class="badge accent clickable" onclick="cycleBook(${b.id})" title="Сменить статус">Читаю ↻</button>
+          </div>
+        `
+          )
+          .join('');
+        const planPreview =
+          planned.length > 0
+            ? `<div style="font-size:12px; color:var(--text-muted); padding:8px 16px 4px;">В планах (${planned.length}): ${planned.slice(0, 2).map((b) => escapeHtml(b.title)).join(' · ')}</div>`
+            : `<div style="font-size:12px; color:var(--text-muted); padding:8px 16px 4px;">В планах: 0</div>`;
+        const foot = `<div style="font-size:12px; color:var(--text-muted); padding:2px 16px 12px;">Прочитано: <b>${done.length}</b></div>`;
+        ovBooks.innerHTML = `${readRows}${planPreview}${foot}`;
+      }
+    }
+
+    // ================= 2. РЕНДЕР: ШКОЛЬНОЕ РАСПИСАНИЕ =================
+    function renderLessonsView() {
+      const mode2 = STATE.settings.week_cycle_mode === '2';
+      document.getElementById('btnWeekMode').textContent = mode2 ? '2 недели' : '1 неделя';
+      document.getElementById('btnSwitchWeek').style.display = mode2 ? 'inline-flex' : 'none';
+
+      document.getElementById('scheduleDayTabs').innerHTML = [1, 2, 3, 4, 5, 6, 7]
+        .map(
+          (d) => `
+        <button class="day-tab ${STATE.selectedDayTab === d ? 'active' : ''}" onclick="selectScheduleDay(${d})">
+          ${DAY_SHORT[d]}
+        </button>
+      `
+        )
+        .join('');
+
+      document.getElementById('scheduleDayTitle').textContent =
+        `${DAY_NAMES[STATE.selectedDayTab]}${mode2 ? (STATE.weekType === 1 ? ' · Верхняя нед.' : ' · Нижняя нед.') : ''}`;
+
+      const list = (STATE.allLessons || []).filter((l) => l.day_of_week === STATE.selectedDayTab);
+      const box = document.getElementById('scheduleDayList');
+      if (list.length === 0) {
+        box.innerHTML = `<div class="empty-line">${DAY_NAMES[STATE.selectedDayTab]}: уроков пока нет</div>`;
+        return;
+      }
+      box.innerHTML = list
+        .map((l) => {
+          const timeRange = l.end_time ? `${l.start_time}–${l.end_time}` : l.start_time;
+          const wt = l.week_type === 1 ? ' · Верхняя' : l.week_type === 2 ? ' · Нижняя' : '';
+          const room = l.room_or_note ? ` · ${escapeHtml(l.room_or_note)}` : '';
+          const joinBtn = l.join_url
+            ? `<a class="badge accent" style="text-decoration:none;" href="${escapeHtml(l.join_url)}" target="_blank">Войти →</a>`
+            : '';
+          return `
+            <div class="row-item">
+              <div class="row-left">
+                <span class="time-col">${escapeHtml(l.start_time)}</span>
+                <div class="row-main">
+                  <div class="row-title">${escapeHtml(l.subject)}</div>
+                  <div class="row-sub">${timeRange}${room}${wt}</div>
+                </div>
+              </div>
+              <div class="row-right">
+                ${joinBtn}
+                <button class="btn btn-ghost" onclick="deleteLessonItem(${l.id})" title="Удалить">×</button>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    // ================= 3. РЕНДЕР: ДНЕВНЫЕ ЗАДАНИЯ =================
+    function renderDailyView() {
+      const overdue = STATE.overduePlans || [];
+      const overdueWrap = document.getElementById('dailyOverdueSection');
+      if (overdue.length === 0) {
+        overdueWrap.innerHTML = '';
+      } else {
+        overdueWrap.innerHTML = `
+          <div class="card card-mb">
+            <div class="overdue-head">
+              <span>Незакрытые задания с прошлых дней (${overdue.length})</span>
+              <button class="btn-link" onclick="moveAllOverdue()">Перенести все на сегодня</button>
+            </div>
+            ${overdue
+              .map(
+                (o) => `
+              <div class="row-item">
+                <div class="row-left">
+                  <button class="check-btn" onclick="togglePlan(${o.id})">✓</button>
+                  <div class="row-main">
+                    <div class="row-title">${escapeHtml(o.title)}</div>
+                    <div class="row-sub">от ${formatHumanDate(o.plan_date)}${o.remind_time ? ` · ${escapeHtml(o.remind_time)}` : ''}</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <button class="badge clickable" onclick="movePlanToday(${o.id})">На сегодня</button>
+                  <button class="btn btn-ghost" onclick="deletePlanItem(${o.id})" title="Удалить">×</button>
+                </div>
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+        `;
+      }
+
+      const upcoming = STATE.upcomingPlans || [];
+      const groupsWrap = document.getElementById('dailyGroupsSection');
+      if (upcoming.length === 0) {
+        groupsWrap.innerHTML = `<div class="card"><div class="empty-line">Заданий на сегодня и ближайшие дни пока нет</div></div>`;
+        return;
+      }
+
+      const grouped = {};
+      for (const p of upcoming) {
+        const d = p.plan_date || STATE.todayStr;
+        if (!grouped[d]) grouped[d] = [];
+        grouped[d].push(p);
+      }
+
+      groupsWrap.innerHTML = Object.entries(grouped)
+        .map(([dateKey, items]) => {
+          const isToday = dateKey === STATE.todayStr;
+          const label = isToday ? `Сегодня · ${formatHumanDate(dateKey)}` : formatHumanDate(dateKey);
+          const doneCnt = items.filter((i) => i.is_done).length;
+          return `
+            <div class="card card-mb">
+              <div class="card-head">
+                <span class="card-title">${label}</span>
+                <span class="card-meta">${doneCnt} из ${items.length}</span>
+              </div>
+              ${items
+                .map(
+                  (p) => `
+                <div class="row-item">
+                  <div class="row-left">
+                    <button class="check-btn ${p.is_done ? 'checked' : ''}" onclick="togglePlan(${p.id})">✓</button>
+                    <div class="row-main">
+                      <div class="row-title ${p.is_done ? 'done' : ''}">${escapeHtml(p.title)}</div>
+                    </div>
+                  </div>
+                  <div class="row-right">
+                    ${p.remind_time ? `<span class="badge">${escapeHtml(p.remind_time)}</span>` : ''}
+                    <button class="btn btn-ghost" onclick="deletePlanItem(${p.id})" title="Удалить">×</button>
+                  </div>
+                </div>
+              `
+                )
+                .join('')}
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    // ================= 4. РЕНДЕР: ОБЩИЕ ПЛАНЫ =================
+    function setGoalFilter(f) {
+      STATE.goalFilter = f;
+      document.querySelectorAll('#goalFiltersBar .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-gf') === f);
+      });
+      renderGoalsView();
+    }
+
+    function renderGoalsView() {
+      const all = STATE.globalPlans || [];
+      const hasDone = all.some((g) => g.is_done);
+      document.getElementById('btnClearDoneGoals').style.display = hasDone ? 'inline-flex' : 'none';
+
+      let list = all;
+      if (STATE.goalFilter === 'priority') list = all.filter((g) => g.is_priority && !g.is_done);
+      else if (STATE.goalFilter === 'done') list = all.filter((g) => g.is_done);
+      else if (['Учёба', 'Проекты', 'Личное'].includes(STATE.goalFilter)) {
+        list = all.filter((g) => g.category === STATE.goalFilter && !g.is_done);
+      }
+
+      const wrap = document.getElementById('goalsListWrap');
+      if (list.length === 0) {
+        wrap.innerHTML = `<div class="empty-line">В этом фильтре общих планов нет</div>`;
+        return;
+      }
+
+      wrap.innerHTML = list
+        .map(
+          (g) => `
+        <div class="row-item">
+          <div class="row-left">
+            <button class="check-btn ${g.is_done ? 'checked' : ''}" onclick="togglePlan(${g.id})">✓</button>
+            <button class="star-btn ${g.is_priority ? 'on' : ''}" onclick="toggleGoalPriority(${g.id})" title="Важное">${g.is_priority ? '★' : '☆'}</button>
+            <div class="row-main">
+              <div class="row-title ${g.is_done ? 'done' : ''}">${escapeHtml(g.title)}</div>
+            </div>
+          </div>
+          <div class="row-right">
+            ${g.category ? `<span class="badge">${escapeHtml(g.category)}</span>` : ''}
+            ${!g.is_done ? `<button class="badge clickable" onclick="takeGoalToToday(${g.id})">На сегодня</button>` : ''}
+            <button class="btn btn-ghost" onclick="deletePlanItem(${g.id})" title="Удалить">×</button>
+          </div>
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    // ================= 5. РЕНДЕР: БАЗА ПРИВЫЧЕК =================
+    function renderHabitsView() {
+      const grid = STATE.habitsGrid || { dates: [], habits: [] };
+      const box = document.getElementById('habitsMatrixCard');
+      if (!grid.habits || grid.habits.length === 0) {
+        box.innerHTML = `<div class="empty-line">Привычек пока нет — нажмите «+ Новая привычка» ниже</div>`;
+        return;
+      }
+
+      const headerCols = grid.dates
+        .map((d) => `<th>${d.slice(8, 10)}.${d.slice(5, 7)}</th>`)
+        .join('');
+
+      const rows = grid.habits
+        .map((h) => {
+          const cells = h.cells
+            .map((c) => {
+              const cls = c.status === 'done' ? 'done' : c.frozen ? 'frozen' : '';
+              return `<td><button class="m-cell ${cls}" onclick="toggleHabitOnDate(${h.id}, '${c.date}')" title="${c.date}${c.value ? ': ' + escapeHtml(c.value) : ''}">${c.status === 'done' ? '✓' : ''}</button></td>`;
+            })
+            .join('');
+          const targetInfo = h.kind === 'value' && (h.target_value || h.unit) ? ` · ${escapeHtml(`${h.target_value} ${h.unit}`.trim())}` : '';
+          return `
+            <tr>
+              <td>
+                <div style="font-weight:600; font-size:13px;">${escapeHtml(h.title)}</div>
+                <div style="font-size:11px; color:var(--text-muted);">серия ${h.streak} дн.${targetInfo}</div>
+              </td>
+              ${cells}
+              <td><button class="btn btn-ghost" onclick="deleteHabitItem(${h.id})" title="Удалить">×</button></td>
+            </tr>
+          `;
+        })
+        .join('');
+
+      box.innerHTML = `
+        <div class="matrix-scroll">
+          <table class="matrix-table">
+            <thead><tr><th>Привычка</th>${headerCols}<th></th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // ================= 6. РЕНДЕР: БАЗА КНИГ =================
+    function setBookFilter(f) {
+      STATE.bookFilter = f;
+      document.querySelectorAll('#bookFiltersBar .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-bf') === f);
+      });
+      renderBooksView();
+    }
+
+    function renderBooksView() {
+      const all = STATE.books || [];
+      const cntRead = all.filter((b) => b.status === 'reading').length;
+      const cntPlan = all.filter((b) => b.status === 'planned').length;
+      const cntDone = all.filter((b) => b.status === 'done').length;
+
+      document.querySelector('[data-bf="all"]').textContent = `Все (${all.length})`;
+      document.querySelector('[data-bf="reading"]').textContent = `Читаю (${cntRead})`;
+      document.querySelector('[data-bf="planned"]').textContent = `В планах (${cntPlan})`;
+      document.querySelector('[data-bf="done"]').textContent = `Прочитано (${cntDone})`;
+
+      const list = STATE.bookFilter === 'all' ? all : all.filter((b) => b.status === STATE.bookFilter);
+      const wrap = document.getElementById('booksListWrap');
+      if (list.length === 0) {
+        wrap.innerHTML = `<div class="empty-line">В этом разделе книг пока нет</div>`;
+        return;
+      }
+
+      wrap.innerHTML = list
+        .map((b) => {
+          const isEditing = STATE.editingBookId === b.id;
+          const stars = b.rating > 0 ? ` · ${'★'.repeat(b.rating)}` : '';
+          const metaParts = [b.author, b.note].filter(Boolean).map(escapeHtml).join(' · ');
+          const badgeCls = b.status === 'reading' ? 'badge accent clickable' : 'badge clickable';
+          return `
+            <div class="row-item">
+              <div class="row-main">
+                <div class="row-title ${b.status === 'done' ? 'done' : ''}" style="${b.status !== 'done' ? 'font-weight:600;' : ''}">${escapeHtml(b.title)}</div>
+                <div class="row-sub">${metaParts || 'Без автора и заметок'}${stars}</div>
+              </div>
+              <div class="row-right">
+                <button class="${badgeCls}" onclick="cycleBook(${b.id})" title="Переключить статус">${bookStatusLabel(b.status)} ↻</button>
+                <button class="btn btn-ghost" onclick="toggleEditBook(${b.id})" title="Редактировать заметку и оценку">✎</button>
+                <button class="btn btn-ghost" onclick="deleteBookItem(${b.id})" title="Удалить">×</button>
+              </div>
+            </div>
+            <div class="book-edit-box ${isEditing ? 'open' : ''}">
+              <form class="form-row" onsubmit="saveBookEdit(event, ${b.id})">
+                <input type="text" id="bkEditNote_${b.id}" class="input" value="${escapeHtml(b.note || '')}" placeholder="Прогресс или короткий отзыв..." />
+                <select id="bkEditStatus_${b.id}" class="input" style="flex:0 1 135px;">
+                  <option value="planned" ${b.status === 'planned' ? 'selected' : ''}>В планах</option>
+                  <option value="reading" ${b.status === 'reading' ? 'selected' : ''}>Читаю сейчас</option>
+                  <option value="done" ${b.status === 'done' ? 'selected' : ''}>Прочитана</option>
+                </select>
+                <select id="bkEditRating_${b.id}" class="input" style="flex:0 1 115px;">
+                  <option value="0" ${b.rating === 0 ? 'selected' : ''}>Без оценки</option>
+                  <option value="5" ${b.rating === 5 ? 'selected' : ''}>★★★★★</option>
+                  <option value="4" ${b.rating === 4 ? 'selected' : ''}>★★★★</option>
+                  <option value="3" ${b.rating === 3 ? 'selected' : ''}>★★★</option>
+                  <option value="2" ${b.rating === 2 ? 'selected' : ''}>★★</option>
+                  <option value="1" ${b.rating === 1 ? 'selected' : ''}>★</option>
+                </select>
+                <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Сохранить</button>
+              </form>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    // ================= ДЕЙСТВИЯ ПОЛЬЗОВАТЕЛЯ =================
+    async function handleQuickCapture(e) {
+      e.preventDefault();
+      const input = document.getElementById('quickInput');
+      const text = input.value.trim();
+      if (!text) return;
+      const out = await api('/api/quick-capture', { text });
+      input.value = '';
+      toggleQuickDrawer(false);
+
+      const ev = out.event;
+      let actionsHtml = '';
+      if (ev && ev.guessed_type !== 'schedule_bulk') {
+        const targets = [
+          { key: 'plan_today', label: 'Задание · Сегодня' },
+          { key: 'plan_tomorrow', label: 'Задание · Завтра' },
+          { key: 'plan_global', label: 'Общий план' },
+          { key: 'book_planned', label: 'В книги' },
+        ].filter((t) => t.key !== ev.guessed_type);
+        actionsHtml =
+          targets.map((t) => `<button class="btn" style="padding:4px 9px;font-size:11.5px;" onclick="reclassifyEvent(${ev.id}, '${t.key}')">${t.label}</button>`).join('') +
+          `<button class="btn btn-ghost" onclick="reclassifyEvent(${ev.id}, 'delete')">Удалить</button>`;
+      }
+      showToast(`● ${out.summary || 'Сохранено'}`, actionsHtml);
+      await loadState(true, false);
+    }
+
+    async function reclassifyEvent(eventId, newType) {
+      await api('/api/reclassify', { eventId, newType });
+      hideGuessBanner();
+      await loadState(true, false);
+    }
+
+    async function handleOverviewDailyAdd(e) {
+      e.preventDefault();
+      const titleEl = document.getElementById('ovDailyInput');
+      const timeEl = document.getElementById('ovDailyTime');
+      const title = titleEl.value.trim();
+      if (!title) return;
+      await api('/api/plans/add', {
+        title,
+        list_type: 'dated',
+        plan_date: STATE.todayStr,
+        remind_time: timeEl.value || '',
+      });
+      titleEl.value = '';
+      timeEl.value = '';
+      await loadState(true, false);
+    }
+
+    async function handleAddDailyTask(e) {
+      e.preventDefault();
+      const title = document.getElementById('dailyTitle').value.trim();
+      if (!title) return;
+      await api('/api/plans/add', {
+        title,
+        list_type: 'dated',
+        plan_date: document.getElementById('dailyDate').value || STATE.todayStr,
+        remind_time: document.getElementById('dailyTime').value || '',
+      });
+      document.getElementById('dailyTitle').value = '';
+      document.getElementById('dailyTime').value = '';
+      await loadState(true, false);
+    }
+
+    async function handleAddGlobalGoal(e) {
+      e.preventDefault();
+      const title = document.getElementById('goalTitle').value.trim();
+      if (!title) return;
+      await api('/api/plans/add', {
+        title,
+        list_type: 'global',
+        category: document.getElementById('goalCategory').value || '',
+        is_priority: document.getElementById('goalPriority').checked ? 1 : 0,
+      });
+      document.getElementById('goalTitle').value = '';
+      document.getElementById('goalPriority').checked = false;
+      await loadState(true, false);
+    }
+
+    async function togglePlan(id) {
+      await api('/api/plans/toggle', { id });
+      await loadState(true, false);
+    }
+
+    async function toggleGoalPriority(id) {
+      await api('/api/plans/toggle-priority', { id });
+      await loadState(true, false);
+    }
+
+    async function movePlanToday(id) {
+      await api('/api/plans/move-today', { id });
+      showToast('● Перенесено на сегодня');
+      await loadState(true, false);
+    }
+
+    async function moveAllOverdue() {
+      const res = await api('/api/plans/move-all-overdue', {});
+      showToast(`● Перенесено на сегодня: ${res.count || 0}`);
+      await loadState(true, false);
+    }
+
+    async function takeGoalToToday(id) {
+      await api('/api/plans/take-today', { id });
+      showToast('● Добавлено в дневные задания на сегодня');
+      await loadState(true, false);
+    }
+
+    async function deletePlanItem(id) {
+      await api('/api/plans/delete', { id });
+      await loadState(true, false);
+    }
+
+    async function clearDoneGoals() {
+      await api('/api/plans/clear-done-global', {});
+      await loadState(true, false);
+    }
+
+    // Уроки
+    function selectScheduleDay(day) {
+      STATE.selectedDayTab = day;
+      renderLessonsView();
+    }
+
+    async function toggleCancelLesson(id) {
+      await api('/api/lessons/toggle-cancel', { id });
+      await loadState(true, false);
+    }
+
+    async function deleteLessonItem(id) {
+      await api('/api/lessons/delete', { id });
+      await loadState(true, false);
+    }
+
+    async function handleAddLesson(e) {
+      e.preventDefault();
+      await api('/api/lessons/add', {
+        day_of_week: STATE.selectedDayTab,
+        start_time: document.getElementById('lesStart').value,
+        end_time: document.getElementById('lesEnd').value,
+        week_type: Number(document.getElementById('lesWeekType').value),
+        subject: document.getElementById('lesSubject').value,
+        room_or_note: document.getElementById('lesRoom').value,
+        join_url: document.getElementById('lesUrl').value,
+      });
+      document.getElementById('lesSubject').value = '';
+      document.getElementById('lesRoom').value = '';
+      document.getElementById('lesUrl').value = '';
+      document.getElementById('panelAddLesson').classList.remove('open');
+      await loadState(true, false);
+    }
+
+    async function handleBulkSchedule(e) {
+      e.preventDefault();
+      const text = document.getElementById('bulkScheduleText').value.trim();
+      if (!text) return;
+      const res = await api('/api/lessons/bulk-text', {
+        text,
+        defaultDay: STATE.selectedDayTab,
+        replaceAll: document.getElementById('bulkReplaceAll').checked,
+      });
+      document.getElementById('bulkScheduleText').value = '';
+      document.getElementById('panelBulkLesson').classList.remove('open');
+      showToast(`● Добавлено уроков: ${res.count}`);
+      await loadState(true, false);
+    }
+
+    async function toggleWeekCycleMode() {
+      const next = STATE.settings.week_cycle_mode === '2' ? '1' : '2';
+      await api('/api/settings', { week_cycle_mode: next });
+      await loadState(true, false);
+    }
+
+    async function flipCurrentWeek() {
+      await api('/api/lessons/flip-week', {});
+      await loadState(true, false);
+    }
+
+    // Привычки
+    function toggleHabitKindFields() {
+      const isVal = document.getElementById('habKind').value === 'value';
+      document.getElementById('habValueFields').style.display = isVal ? 'flex' : 'none';
+    }
+
+    function toggleWdPill(el) {
+      el.classList.toggle('on');
+    }
+
+    async function handleAddHabit(e) {
+      e.preventDefault();
+      const days = [...document.querySelectorAll('#habWeekdays .wd-pill.on')]
+        .map((el) => el.getAttribute('data-d'))
+        .join(',');
+      await api('/api/habits/add', {
+        title: document.getElementById('habTitle').value,
+        kind: document.getElementById('habKind').value,
+        target_value: document.getElementById('habTarget').value,
+        unit: document.getElementById('habUnit').value,
+        days_mask: days || '1,2,3,4,5,6,7',
+      });
+      document.getElementById('habTitle').value = '';
+      document.getElementById('habTarget').value = '';
+      document.getElementById('habUnit').value = '';
+      document.getElementById('panelAddHabit').classList.remove('open');
+      await loadState(true, false);
+    }
+
+    async function toggleHabitToday(id) {
+      await api('/api/habits/toggle', { id, date_str: STATE.todayStr });
+      await loadState(true, false);
+    }
+
+    async function toggleHabitOnDate(id, dateStr) {
+      await api('/api/habits/toggle', { id, date_str: dateStr });
+      await loadState(true, false);
+    }
+
+    async function saveHabitValue(id, val) {
+      await api('/api/habits/set-value', { id, date_str: STATE.todayStr, value_text: val });
+      await loadState(true, false);
+    }
+
+    async function deleteHabitItem(id) {
+      await api('/api/habits/delete', { id });
+      await loadState(true, false);
+    }
+
+    // Книги
+    async function handleAddBook(e) {
+      e.preventDefault();
+      const title = document.getElementById('bookTitle').value.trim();
+      if (!title) return;
+      await api('/api/books/add', {
+        title,
+        author: document.getElementById('bookAuthor').value.trim(),
+        status: document.getElementById('bookStatus').value,
+        note: document.getElementById('bookNote').value.trim(),
+        rating: Number(document.getElementById('bookRating').value) || 0,
+      });
+      document.getElementById('bookTitle').value = '';
+      document.getElementById('bookAuthor').value = '';
+      document.getElementById('bookNote').value = '';
+      document.getElementById('bookRating').value = '0';
+      await loadState(true, false);
+    }
+
+    async function cycleBook(id) {
+      await api('/api/books/cycle-status', { id });
+      await loadState(true, false);
+    }
+
+    function toggleEditBook(id) {
+      STATE.editingBookId = STATE.editingBookId === id ? null : id;
+      renderBooksView();
+    }
+
+    async function saveBookEdit(e, id) {
+      e.preventDefault();
+      await api('/api/books/update', {
+        id,
+        note: document.getElementById(`bkEditNote_${id}`).value.trim(),
+        status: document.getElementById(`bkEditStatus_${id}`).value,
+        rating: Number(document.getElementById(`bkEditRating_${id}`).value) || 0,
+      });
+      STATE.editingBookId = null;
+      await loadState(true, false);
+    }
+
+    async function deleteBookItem(id) {
+      if (STATE.editingBookId === id) STATE.editingBookId = null;
+      await api('/api/books/delete', { id });
+      await loadState(true, false);
+    }
+
+    // ================= СТУДИЯ ОФОРМЛЕНИЯ И НАСТРОЕК =================
+    function openStudio(tab = 'themes') {
+      document.getElementById('studioModal').classList.add('open');
+      switchStudioTab(tab);
+      renderStudioThemes();
+      renderStudioSettingsState();
+    }
+
+    function closeStudio() {
+      document.getElementById('studioModal').classList.remove('open');
+    }
+
+    function switchStudioTab(tab) {
+      const isThemes = tab === 'themes';
+      document.getElementById('stTabBtnThemes').classList.toggle('active', isThemes);
+      document.getElementById('stTabBtnSettings').classList.toggle('active', !isThemes);
+      document.getElementById('studioPaneThemes').style.display = isThemes ? 'flex' : 'none';
+      document.getElementById('studioPaneSettings').style.display = isThemes ? 'none' : 'flex';
+    }
+
+    function flashStudioToast(msg = '● Сохранено') {
+      const el = document.getElementById('studioToast');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(window._stToast);
+      window._stToast = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function renderStudioThemes() {
+      document.querySelectorAll('#tweakModeGroup .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-val') === UI_PREFS.modeOverride);
+      });
+      document.querySelectorAll('#tweakWatermarkGroup .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-val') === UI_PREFS.watermarkLevel);
+      });
+      document.querySelectorAll('#tweakHeroGroup .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-val') === UI_PREFS.heroCard);
+      });
+      document.querySelectorAll('#skinFiltersBar .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-cat') === UI_PREFS.filterCat);
+      });
+
+      const list = UI_PREFS.filterCat === 'all'
+        ? SKINS
+        : SKINS.filter((s) => s.category.includes(UI_PREFS.filterCat));
+
+      const grid = document.getElementById('skinsGrid');
+      if (!grid) return;
+      grid.innerHTML = list
+        .map((s) => {
+          const thumb = s.img
+            ? `<img src="${s.img}?v=hd4" alt="${escapeHtml(s.name)}" style="object-position:${s.cropPos || '50% 20%'};" />`
+            : `<span>Без арта</span>`;
+          return `
+            <div class="skin-card ${s.id === UI_PREFS.skinId ? 'active' : ''}" onclick="selectSkin('${s.id}')">
+              <div class="skin-thumb">${thumb}</div>
+              <div class="skin-info">
+                <div style="min-width:0;">
+                  <div class="skin-name">${escapeHtml(s.name)}</div>
+                  <div class="skin-sub">${escapeHtml(s.sub)}</div>
+                </div>
+                <span class="swatch-dot" style="background:${s.colors.pink};"></span>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function renderStudioSettingsState() {
+      const s = STATE.settings || {};
+      const btnL = document.getElementById('stPauseLessonsBtn');
+      if (btnL) {
+        const on = s.pause_lessons === '1';
+        btnL.textContent = on ? '● Включена' : 'Выкл';
+        btnL.classList.toggle('btn-primary', on);
+      }
+      const btnA = document.getElementById('stPauseAllBtn');
+      if (btnA) {
+        const on = s.pause_all === '1';
+        btnA.textContent = on ? '● Включена' : 'Выкл';
+        btnA.classList.toggle('btn-primary', on);
+      }
+
+      const lead = String(s.lesson_lead_minutes || '2');
+      document.querySelectorAll('#stLeadMinPills .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-min') === lead);
+      });
+      const wm = String(s.week_cycle_mode || '1');
+      document.querySelectorAll('#stWeekModePills .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-wm') === wm);
+      });
+      const mo = String(s.morning_digest_offset_min || '30');
+      document.querySelectorAll('#stMorningOffsetPills .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-mo') === mo);
+      });
+      const et = s.evening_habits_time || '21:00';
+      document.querySelectorAll('#stEveningTimePills .seg-pill').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-et') === et);
+      });
+
+      const botSt = document.getElementById('stBotTokenStatus');
+      if (botSt) {
+        if (s.has_bot_token) {
+          const uname = s.bot_username ? ` (@${s.bot_username})` : '';
+          botSt.textContent = `● Бот подключён${uname} — база синхронизируется с Telegram`;
+        } else {
+          botSt.textContent = '○ Не подключён — работает автономно (можно подключить своего бота)';
+        }
+      }
+
+      const gemSt = document.getElementById('stGeminiStatus');
+      if (gemSt) {
+        gemSt.textContent = s.has_gemini_key
+          ? '● Ключ подключён — распознавание фото и голоса работает'
+          : '○ Ключ пока не указан';
+      }
+    }
+
+    async function toggleSetting(key) {
+      const next = STATE.settings[key] === '1' ? '0' : '1';
+      await api('/api/settings', { [key]: next });
+      flashStudioToast();
+      await loadState(true, false);
+    }
+
+    async function quickSaveSetting(key, val) {
+      await api('/api/settings', { [key]: val });
+      flashStudioToast();
+      await loadState(true, false);
+    }
+
+    async function saveBotTokenForm(e) {
+      e.preventDefault();
+      const input = document.getElementById('setBotToken');
+      const val = input.value.trim();
+      if (!val) return;
+      const res = await api('/api/settings', { bot_token: val });
+      input.value = '';
+      if (res.telegram && res.telegram.ok === false) {
+        flashStudioToast(`× Telegram: ${res.telegram.error || 'проверьте токен'}`);
+      } else {
+        const uname = res.telegram && res.telegram.username ? ` @${res.telegram.username}` : '';
+        flashStudioToast(`● Бот${uname} подключён и защищён`);
+      }
+      await loadState(true, false);
+    }
+
+    async function saveGeminiKeyForm(e) {
+      e.preventDefault();
+      const input = document.getElementById('setGeminiKey');
+      const val = input.value.trim();
+      if (!val) return;
+      await api('/api/settings', { gemini_api_key: val });
+      input.value = '';
+      flashStudioToast('● Ключ сохранён');
+      await loadState(true, false);
+    }
+
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F12' || (e.ctrlKey && ['p', 'P', 's', 'S'].includes(e.key))) {
+        e.preventDefault();
+      }
+    });
+
+    loadUiPrefs();
+    loadState(false, false);
+    setInterval(() => loadState(true, true), 3000);
+    window.addEventListener('focus', () => loadState(true, true));
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) loadState(true, true);
+    });
+  </script>
+</body>
+</html>
