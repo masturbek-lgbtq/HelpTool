@@ -870,6 +870,29 @@
       min-width: 0;
     }
 
+    body.no-school .school-only {
+      display: none !important;
+    }
+
+    body.no-school .mobile-nav-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    @media (min-width: 861px) {
+      body.no-school #ovDailyCard {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      body.no-school #ovGoalsCard {
+        grid-column: 1;
+        grid-row: 2;
+      }
+      body.no-school .bento-stack {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+      }
+    }
+
     /* Чистая карточка Bento / раздела */
     .card {
       background: var(--surface-glass);
@@ -1653,7 +1676,7 @@
             <span>Обзор дня</span>
             <span class="side-cnt" id="cntOverview">Сегодня</span>
           </button>
-          <button class="side-btn" data-view="lessons" onclick="switchView('lessons')">
+          <button class="side-btn school-only" data-view="lessons" onclick="switchView('lessons')">
             <span>Школьное расписание</span>
             <span class="side-cnt" id="cntLessons">0</span>
           </button>
@@ -1766,7 +1789,7 @@
       <section class="view-pane active" id="view-overview">
         <div class="bento-grid">
           <!-- Карточка 1: Школьное расписание -->
-          <div class="card">
+          <div class="card school-only" id="ovLessonsCard">
             <div class="card-head">
               <span class="card-title">Школьное расписание</span>
               <div class="card-head-right">
@@ -1778,7 +1801,7 @@
           </div>
 
           <!-- Карточка 2: Дневные задания -->
-          <div class="card">
+          <div class="card" id="ovDailyCard">
             <div class="card-head">
               <span class="card-title">Дневные задания</span>
               <div class="card-head-right">
@@ -1796,7 +1819,7 @@
           </div>
 
           <!-- Карточка 3: Общие планы (глобальные) -->
-          <div class="card">
+          <div class="card" id="ovGoalsCard">
             <div class="card-head">
               <span class="card-title">Общие планы (глобальное)</span>
               <div class="card-head-right">
@@ -1833,7 +1856,7 @@
       </section>
 
       <!-- ================= 2. ШКОЛЬНОЕ РАСПИСАНИЕ ================= -->
-      <section class="view-pane" id="view-lessons">
+      <section class="view-pane school-only" id="view-lessons">
         <div class="day-tabs" id="scheduleDayTabs"></div>
 
         <div class="card card-mb">
@@ -2041,7 +2064,7 @@
       <button class="mob-nav-btn active" data-view="overview" onclick="switchView('overview')">
         <span class="ico">◉</span><span>Обзор</span>
       </button>
-      <button class="mob-nav-btn" data-view="lessons" onclick="switchView('lessons')">
+      <button class="mob-nav-btn school-only" data-view="lessons" onclick="switchView('lessons')">
         <span class="ico">◷</span><span>Уроки</span>
       </button>
       <button class="mob-nav-btn" data-view="daily" onclick="switchView('daily')">
@@ -2127,7 +2150,7 @@
       <!-- ВКЛАДКА 2: УВЕДОМЛЕНИЯ, ПАУЗА, TELEGRAM И GEMINI -->
       <div class="studio-body" id="studioPaneSettings" style="display:none;">
         <div class="tweak-bar">
-          <div class="tweak-row">
+          <div class="tweak-row school-only">
             <div>
               <span class="tweak-label">Пауза на школьные уроки</span>
               <span class="tweak-sub">Каникулы или болезнь — отключает только звонки об уроках</span>
@@ -2165,7 +2188,7 @@
         </div>
 
         <div class="tweak-bar">
-          <div class="tweak-row">
+          <div class="tweak-row school-only">
             <div>
               <span class="tweak-label">Напоминать до начала урока</span>
             </div>
@@ -2179,7 +2202,7 @@
             </div>
           </div>
 
-          <div class="tweak-row">
+          <div class="tweak-row school-only">
             <div>
               <span class="tweak-label">Цикл расписания</span>
             </div>
@@ -2189,7 +2212,7 @@
             </div>
           </div>
 
-          <div class="tweak-row">
+          <div class="tweak-row school-only">
             <div><span class="tweak-label">Утренняя сводка до урока</span></div>
             <div class="pill-group" id="stMorningOffsetPills">
               <button class="seg-pill" data-mo="15" onclick="quickSaveSetting('morning_digest_offset_min', '15')">15 мин</button>
@@ -2756,14 +2779,56 @@
       return 'night';
     }
 
+    function isSchoolOn() {
+      if (STATE.features && typeof STATE.features.school === 'boolean') {
+        return STATE.features.school;
+      }
+      try {
+        return localStorage.getItem('pa_school_on') !== '0';
+      } catch {
+        return true;
+      }
+    }
+
+    const NO_SCHOOL_FALLBACKS = [
+      'Держи курс на главное: закрой одно дело сегодня и переходи к следующему.',
+      'Таймер фокуса на 25 минут поможет быстро дожать самую важную задачу.',
+      'Даже крупный общий план легко разбирается, если забирать по шагу в день.',
+      'Полка книг и трекер привычек всегда под рукой в одном окне.',
+    ];
+
+    function getSkinQuotes(skin) {
+      const raw = (skin && skin.quotes) || [];
+      if (isSchoolOn()) return raw;
+      const filtered = raw.filter(
+        (q) => !/(урок|расписан|звон|каникул|заболел|школь|пары|пару|верхн|нижн)/i.test(q)
+      );
+      if (filtered.length >= 4) return filtered;
+      return [...filtered, ...NO_SCHOOL_FALLBACKS].slice(0, Math.max(4, filtered.length));
+    }
+
     function getTimeGreeting(skin) {
       const slot = getTimeSlot();
-      const first = (skin.quotes && skin.quotes[0]) || '';
+      const quotes = getSkinQuotes(skin);
+      const first = quotes[0] || '';
+      const schoolOn = isSchoolOn();
       if (slot === 'morning') {
-        if (skin.id === 'ellen-zzz') return 'Доброе утро… ещё бы поспать, но сначала закроем уроки и задания дня.';
+        if (skin.id === 'ellen-zzz') {
+          return schoolOn
+            ? 'Доброе утро… ещё бы поспать, но сначала закроем уроки и задания дня.'
+            : 'Доброе утро… ещё бы поспать, но сначала закроем задания дня.';
+        }
         if (skin.id === 'vergil-yamato') return 'Утро началось. Собери волю и закрой первую задачу дня.';
-        if (skin.id === 'terrorblade-sakura') return 'Утро на свитке: без лишней суеты разбери уроки и задания дня.';
-        if (skin.id === 'chocola-maid') return 'Доброе утро! Расписание на сегодня уже готово, хорошего тебе дня!';
+        if (skin.id === 'terrorblade-sakura') {
+          return schoolOn
+            ? 'Утро на свитке: без лишней суеты разбери уроки и задания дня.'
+            : 'Утро на свитке: без лишней суеты разбери задания дня.';
+        }
+        if (skin.id === 'chocola-maid') {
+          return schoolOn
+            ? 'Доброе утро! Расписание на сегодня уже готово, хорошего тебе дня!'
+            : 'Доброе утро! Список дел и привычек на сегодня уже готов, хорошего дня!';
+        }
         return `Доброе утро! ${first}`;
       }
       if (slot === 'evening') {
@@ -3182,14 +3247,15 @@
 
       renderChibiSvg(skin, liveReactionMood);
 
-      if (skin.quotes && skin.quotes.length) {
-        const idx = quoteIdx % skin.quotes.length;
+      const quotes = getSkinQuotes(skin);
+      if (quotes.length) {
+        const idx = quoteIdx % quotes.length;
         const displayQuote =
           liveReactionText ||
-          (quoteIdx === 0 ? getTimeGreeting(skin) : skin.quotes[idx]);
+          (quoteIdx === 0 ? getTimeGreeting(skin) : quotes[idx]);
         if (quoteAuthor) quoteAuthor.textContent = skin.name.split('·')[0].trim();
         if (quoteCount) {
-          quoteCount.textContent = liveReactionText ? '★ реакция' : `${idx + 1}/${skin.quotes.length} · ещё →`;
+          quoteCount.textContent = liveReactionText ? '★ реакция' : `${idx + 1}/${quotes.length} · ещё →`;
         }
         if (quoteText) quoteText.textContent = `«${displayQuote}»`;
       }
@@ -3277,6 +3343,12 @@
           ...data,
           selectedDayTab: firstLoad || !preserveDay ? data.isoDay : STATE.selectedDayTab,
         };
+        const schoolOn = isSchoolOn();
+        try { localStorage.setItem('pa_school_on', schoolOn ? '1' : '0'); } catch {}
+        document.body.classList.toggle('no-school', !schoolOn);
+        if (!schoolOn && STATE.activeView === 'lessons') {
+          switchView('overview');
+        }
         const dateInput = document.getElementById('dailyDate');
         if (dateInput && !dateInput.value) dateInput.value = STATE.todayStr;
         renderAll();
@@ -3289,6 +3361,7 @@
 
     // ================= НАВИГАЦИЯ =================
     function switchView(viewId) {
+      if (!isSchoolOn() && viewId === 'lessons') viewId = 'overview';
       if (STATE.activeView !== viewId) playUiSound('tap');
       STATE.activeView = viewId;
       document.querySelectorAll('.view-pane').forEach((el) => el.classList.remove('active'));
@@ -3355,14 +3428,15 @@
 
       if (STATE.activeView === 'overview') {
         titleEl.textContent = dateStr;
+        const schoolOn = isSchoolOn();
         const activeLessons = (STATE.todayLessons || []).filter((l) => !l.is_cancelled_today).length;
         const openDaily = (STATE.todayPlans || []).filter((p) => !p.is_done).length;
         const overdueCnt = (STATE.overduePlans || []).length;
         const parts = [];
-        parts.push(activeLessons ? `Уроков: ${activeLessons}` : 'Уроков нет');
+        if (schoolOn) parts.push(activeLessons ? `Уроков: ${activeLessons}` : 'Уроков нет');
         parts.push(openDaily ? `Заданий осталось: ${openDaily}` : 'Задания закрыты');
         if (overdueCnt) parts.push(`С прошлых дней: ${overdueCnt}`);
-        if (s.week_cycle_mode === '2') parts.push(STATE.weekType === 1 ? 'Верхняя нед.' : 'Нижняя нед.');
+        if (schoolOn && s.week_cycle_mode === '2') parts.push(STATE.weekType === 1 ? 'Верхняя нед.' : 'Нижняя нед.');
         subEl.textContent = parts.join(' · ');
       } else {
         titleEl.textContent = VIEW_TITLES[STATE.activeView] || dateStr;
@@ -3374,7 +3448,7 @@
         if (s.pause_all === '1') {
           pauseBtn.textContent = '× Полная тишина';
           pauseBtn.classList.add('paused');
-        } else if (s.pause_lessons === '1') {
+        } else if (isSchoolOn() && s.pause_lessons === '1') {
           pauseBtn.textContent = '◐ Пауза уроков';
           pauseBtn.classList.add('paused');
         } else {
@@ -4712,6 +4786,7 @@
       }
     });
 
+    document.body.classList.toggle('no-school', !isSchoolOn());
     setupParallax();
     initFxParticles();
     loadUiPrefs();

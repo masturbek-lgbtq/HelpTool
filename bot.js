@@ -144,6 +144,38 @@ try {
   safeWriteFile(PID_FILE, String(process.pid), 'utf8');
 } catch {}
 
+const GITHUB_OWNER = 'masturbek-lgbtq';
+const GITHUB_REPO = 'HelpTool';
+const APP_VERSION_FILE = path.join(__dirname, '.app-version.json');
+
+function readLocalAppVersion() {
+  try {
+    if (!fs.existsSync(APP_VERSION_FILE)) {
+      return { edition: '', schoolEnabled: undefined, commitSha: '', fileShas: {} };
+    }
+    const parsed = JSON.parse(fs.readFileSync(APP_VERSION_FILE, 'utf8'));
+    return {
+      edition: typeof parsed.edition === 'string' ? parsed.edition.trim() : '',
+      schoolEnabled: typeof parsed.schoolEnabled === 'boolean' ? parsed.schoolEnabled : undefined,
+      commitSha: typeof parsed.commitSha === 'string' ? parsed.commitSha.trim() : '',
+      fileShas: parsed.fileShas && typeof parsed.fileShas === 'object' ? parsed.fileShas : {},
+    };
+  } catch {
+    return { edition: '', schoolEnabled: undefined, commitSha: '', fileShas: {} };
+  }
+}
+
+function isSchoolEnabled() {
+  try {
+    const ver = readLocalAppVersion();
+    if (ver.edition === 'friend' || ver.schoolEnabled === false) return false;
+    if (ver.edition === 'personal' || ver.schoolEnabled === true) return true;
+  } catch {}
+  if (process.env.ENABLE_SCHOOL === '1') return true;
+  if (process.env.DISABLE_SCHOOL === '1') return false;
+  return fs.existsSync(path.join(__dirname, '.git'));
+}
+
 function getWebAccessKey() {
   const token = getActiveBotToken();
   if (!token) return '';
@@ -158,14 +190,19 @@ let publicTunnelUrl = '';
 let tunnelProcess = null;
 const userSessions = new Map();
 
-// Нижняя панель в чате: единая система из 5 разделов + Обзор
-const MAIN_REPLY_KEYBOARD = {
-  keyboard: [
-    [{ text: 'Обзор' }, { text: 'Расписание' }, { text: 'Задания' }],
-    [{ text: 'Общие планы' }, { text: 'Привычки' }, { text: 'Книги' }],
-  ],
-  resize_keyboard: true,
-};
+// Нижняя панель в чате: единая система разделов + Обзор
+function getMainReplyKeyboard() {
+  const row1 = isSchoolEnabled()
+    ? [{ text: 'Обзор' }, { text: 'Расписание' }, { text: 'Задания' }]
+    : [{ text: 'Обзор' }, { text: 'Задания' }];
+  return {
+    keyboard: [
+      row1,
+      [{ text: 'Общие планы' }, { text: 'Привычки' }, { text: 'Книги' }],
+    ],
+    resize_keyboard: true,
+  };
+}
 
 function escapeHtml(str = '') {
   return String(str)
@@ -348,12 +385,13 @@ async function updateTelegramMenuButton() {
 function buildTodayView() {
   const today = toDateStr();
   const isoDay = getIsoDayOfWeek(today);
+  const schoolOn = isSchoolEnabled();
   const wt = getWeekTypeForDate(today);
-  const mode2 = getSetting('week_cycle_mode', '1') === '2';
+  const mode2 = schoolOn && getSetting('week_cycle_mode', '1') === '2';
   const pauseAll = getSetting('pause_all', '0') === '1';
-  const pauseLessons = getSetting('pause_lessons', '0') === '1';
+  const pauseLessons = schoolOn && getSetting('pause_lessons', '0') === '1';
 
-  const lessons = getLessonsForDate(today);
+  const lessons = schoolOn ? getLessonsForDate(today) : [];
   const habits = getHabitsForDate(today).filter((h) => h.scheduled_today);
   const overdue = getOverdueDailyPlans(today);
   const plans = getPlansForDate(today);
@@ -371,19 +409,21 @@ function buildTodayView() {
     lines.push(`<i>◐ Уроки на паузе (каникулы / болезнь)</i>`);
   }
 
-  // 1. Уроки
-  lines.push(``, `<b>Школьное расписание</b>`);
-  if (lessons.length === 0) {
-    lines.push(`<i>Сегодня уроков нет</i>`);
-  } else {
-    for (const l of lessons) {
-      const sym = l.is_cancelled_today ? '×' : '●';
-      const timeStr = l.end_time ? `${l.start_time}–${l.end_time}` : l.start_time;
-      const room = l.room_or_note ? ` · ${escapeHtml(l.room_or_note)}` : '';
-      if (l.is_cancelled_today) {
-        lines.push(`${sym} <s>${timeStr} ${escapeHtml(l.subject)}</s> <i>(отменён)</i>`);
-      } else {
-        lines.push(`${sym} <code>${timeStr}</code> ${escapeHtml(l.subject)}${room}`);
+  // 1. Уроки (только если включён школьный раздел)
+  if (schoolOn) {
+    lines.push(``, `<b>Школьное расписание</b>`);
+    if (lessons.length === 0) {
+      lines.push(`<i>Сегодня уроков нет</i>`);
+    } else {
+      for (const l of lessons) {
+        const sym = l.is_cancelled_today ? '×' : '●';
+        const timeStr = l.end_time ? `${l.start_time}–${l.end_time}` : l.start_time;
+        const room = l.room_or_note ? ` · ${escapeHtml(l.room_or_note)}` : '';
+        if (l.is_cancelled_today) {
+          lines.push(`${sym} <s>${timeStr} ${escapeHtml(l.subject)}</s> <i>(отменён)</i>`);
+        } else {
+          lines.push(`${sym} <code>${timeStr}</code> ${escapeHtml(l.subject)}${room}`);
+        }
       }
     }
   }
@@ -465,11 +505,17 @@ function buildTodayView() {
     ]);
   }
 
-  inline_keyboard.push([
-    { text: 'Расписание', callback_data: `nav:lessons:${isoDay}` },
-    { text: 'Задания', callback_data: `nav:plans:today` },
-    { text: 'Общие планы', callback_data: `nav:plans:global` },
-  ]);
+  const navRow1 = schoolOn
+    ? [
+        { text: 'Расписание', callback_data: `nav:lessons:${isoDay}` },
+        { text: 'Задания', callback_data: `nav:plans:today` },
+        { text: 'Общие планы', callback_data: `nav:plans:global` },
+      ]
+    : [
+        { text: 'Задания', callback_data: `nav:plans:today` },
+        { text: 'Общие планы', callback_data: `nav:plans:global` },
+      ];
+  inline_keyboard.push(navRow1);
   inline_keyboard.push([
     { text: 'Привычки', callback_data: `nav:habits` },
     { text: 'Книги', callback_data: `nav:books:all` },
@@ -783,37 +829,41 @@ function buildBooksView(filter = 'all') {
 }
 
 function buildPauseView() {
-  const pauseLessons = getSetting('pause_lessons', '0') === '1';
+  const schoolOn = isSchoolEnabled();
+  const pauseLessons = schoolOn && getSetting('pause_lessons', '0') === '1';
   const pauseAll = getSetting('pause_all', '0') === '1';
   const leadMin = getSetting('lesson_lead_minutes', '2');
 
-  const lines = [
-    `<b>Пауза и уведомления</b>`,
-    ``,
-    `Уроки: <b>${pauseLessons || pauseAll ? 'На паузе' : `Активны (за ${leadMin} мин до начала)`}</b>`,
-    `Общий режим: <b>${pauseAll ? 'Полная тишина' : 'Активен'}</b>`,
-    ``,
-    `<i>Во время паузы серии привычек замораживаются и не сбрасываются.</i>`,
-  ];
+  const lines = [`<b>Пауза и уведомления</b>`, ``];
+  if (schoolOn) {
+    lines.push(
+      `Уроки: <b>${pauseLessons || pauseAll ? 'На паузе' : `Активны (за ${leadMin} мин до начала)`}</b>`
+    );
+  }
+  lines.push(`Общий режим: <b>${pauseAll ? 'Полная тишина' : 'Активен'}</b>`);
+  lines.push(``, `<i>Во время паузы серии привычек замораживаются и не сбрасываются.</i>`);
 
-  const inline_keyboard = [
-    [
+  const inline_keyboard = [];
+  if (schoolOn) {
+    inline_keyboard.push([
       {
         text: pauseLessons
           ? '[ ● Пауза только на уроки ]'
           : '○ Пауза только на уроки (каникулы / болезнь)',
         callback_data: 'pause_tog:lessons',
       },
-    ],
-    [
-      {
-        text: pauseAll
-          ? '[ ● Полная тишина (все уведомления) ]'
-          : '○ Полная тишина (все уведомления)',
-        callback_data: 'pause_tog:all',
-      },
-    ],
-    [
+    ]);
+  }
+  inline_keyboard.push([
+    {
+      text: pauseAll
+        ? '[ ● Полная тишина (все уведомления) ]'
+        : '○ Полная тишина (все уведомления)',
+      callback_data: 'pause_tog:all',
+    },
+  ]);
+  if (schoolOn) {
+    inline_keyboard.push([
       {
         text: leadMin === '1' ? '[ За 1 мин ]' : 'За 1 мин',
         callback_data: 'lead_set:1',
@@ -830,8 +880,8 @@ function buildPauseView() {
         text: leadMin === '10' ? '[ За 10 мин ]' : 'За 10 мин',
         callback_data: 'lead_set:10',
       },
-    ],
-  ];
+    ]);
+  }
 
   const webRow = makeWebAppButtonRow('Все настройки на экране');
   if (webRow) inline_keyboard.push(webRow);
@@ -873,7 +923,7 @@ function executeSmartCapture(rawText, mediaType = '', mediaFileId = '') {
   const today = toDateStr();
   const classified = classifyMessageLocal(rawText);
 
-  if (classified.type === 'schedule_bulk') {
+  if (classified.type === 'schedule_bulk' && isSchoolEnabled()) {
     for (const l of classified.lessons) {
       addLesson(l);
     }
@@ -1033,15 +1083,18 @@ async function handleMessage(msg) {
   if (text.startsWith('/key ')) {
     const k = text.slice(5).trim();
     setSetting('gemini_api_key', k);
-    await sendMessage(chatId, `● Ключ ИИ сохранен. Распознавание фото расписания и голоса включено.`, {
-      reply_markup: MAIN_REPLY_KEYBOARD,
+    const keyHint = isSchoolEnabled()
+      ? '● Ключ ИИ сохранен. Распознавание фото расписания и голоса включено.'
+      : '● Ключ ИИ сохранен. Распознавание фото и голоса включено.';
+    await sendMessage(chatId, keyHint, {
+      reply_markup: getMainReplyKeyboard(),
     });
     return;
   }
 
   if (text === 'Отмена' || text === '/cancel') {
     userSessions.delete(userId);
-    await sendMessage(chatId, `Отменено.`, { reply_markup: MAIN_REPLY_KEYBOARD });
+    await sendMessage(chatId, `Отменено.`, { reply_markup: getMainReplyKeyboard() });
     return;
   }
 
@@ -1049,14 +1102,13 @@ async function handleMessage(msg) {
     userSessions.delete(userId);
     const view = buildTodayView();
     await sendMessage(chatId, view.text, {
-      reply_markup: MAIN_REPLY_KEYBOARD,
+      reply_markup: getMainReplyKeyboard(),
     });
     if (view.reply_markup.inline_keyboard.length > 0) {
-      await sendMessage(
-        chatId,
-        `<i>Пишите в чат свободным текстом: бот распределит сообщение в дневные задания, общие планы, книги, привычки или расписание. Кнопками под ответом раздел всегда можно поправить.</i>`,
-        { reply_markup: view.reply_markup }
-      );
+      const startHint = isSchoolEnabled()
+        ? `<i>Пишите в чат свободным текстом: бот распределит сообщение в дневные задания, общие планы, книги, привычки или расписание. Кнопками под ответом раздел всегда можно поправить.</i>`
+        : `<i>Пишите в чат свободным текстом: бот распределит сообщение в дневные задания, общие планы, книги или привычки. Кнопками под ответом раздел всегда можно поправить.</i>`;
+      await sendMessage(chatId, startHint, { reply_markup: view.reply_markup });
     }
     return;
   }
@@ -1071,6 +1123,12 @@ async function handleMessage(msg) {
 
   if (text === 'Расписание' || text === 'Уроки' || text === '/lessons') {
     userSessions.delete(userId);
+    if (!isSchoolEnabled()) {
+      await sendMessage(chatId, `Раздел школьного расписания отключён в этой версии.`, {
+        reply_markup: getMainReplyKeyboard(),
+      });
+      return;
+    }
     const view = buildLessonsView(getIsoDayOfWeek());
     await sendMessage(chatId, view.text, { reply_markup: view.reply_markup });
     return;
@@ -1259,9 +1317,9 @@ async function handleMessage(msg) {
   if (msg.photo && msg.photo.length > 0) {
     const bestPhoto = msg.photo[msg.photo.length - 1];
     const fileId = bestPhoto.file_id;
+    const schoolOn = isSchoolEnabled();
     const isScheduleIntent =
-      session?.step === 'IMPORT_SCHEDULE' ||
-      /расписани|урок/i.test(text);
+      schoolOn && (session?.step === 'IMPORT_SCHEDULE' || /расписани|урок/i.test(text));
 
     if (isScheduleIntent) {
       userSessions.delete(userId);
@@ -1292,10 +1350,11 @@ async function handleMessage(msg) {
 
     const noteCaption = text || `Фото (${formatHumanDateShort(toDateStr())} ${toTimeStr()})`;
     const cap = executeSmartCapture(noteCaption, 'photo', fileId);
+    const extraBtns = isSchoolEnabled()
+      ? [{ text: 'Распознать как расписание', callback_data: `photo_sched:${cap.event.id}` }]
+      : [];
     await sendMessage(chatId, cap.html, {
-      reply_markup: buildCorrectionKeyboard(cap.event.id, cap.event.guessed_type, [
-        { text: 'Распознать как расписание', callback_data: `photo_sched:${cap.event.id}` },
-      ]),
+      reply_markup: buildCorrectionKeyboard(cap.event.id, cap.event.guessed_type, extraBtns),
     });
     return;
   }
@@ -1334,9 +1393,14 @@ async function handleCallbackQuery(cb) {
       const view = buildTodayView();
       await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
     } else if (section === 'lessons') {
-      const day = parseInt(parts[2] || String(getIsoDayOfWeek()), 10);
-      const view = buildLessonsView(day);
-      await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
+      if (!isSchoolEnabled()) {
+        const view = buildTodayView();
+        await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
+      } else {
+        const day = parseInt(parts[2] || String(getIsoDayOfWeek()), 10);
+        const view = buildLessonsView(day);
+        await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
+      }
     } else if (section === 'habits') {
       const view = buildHabitsView();
       await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
@@ -1724,13 +1788,14 @@ async function runSchedulerTick() {
   const pauseAll = getSetting('pause_all', '0') === '1';
   if (pauseAll) return;
 
-  const pauseLessons = getSetting('pause_lessons', '0') === '1';
+  const schoolOn = isSchoolEnabled();
+  const pauseLessons = schoolOn && getSetting('pause_lessons', '0') === '1';
   const leadMin = Math.max(1, parseInt(getSetting('lesson_lead_minutes', '2'), 10) || 2);
 
   // 2. Уведомления об уроках (по умолчанию за 2 минуты до начала)
-  const todayLessons = getLessonsForDate(today).filter((l) => !l.is_cancelled_today);
+  const todayLessons = schoolOn ? getLessonsForDate(today).filter((l) => !l.is_cancelled_today) : [];
 
-  if (!pauseLessons) {
+  if (schoolOn && !pauseLessons) {
     for (const lesson of todayLessons) {
       const startMin = timeToMinutes(lesson.start_time);
       if (startMin < 0) continue;
@@ -1908,10 +1973,6 @@ function createAutoBackup() {
   return targetDir;
 }
 
-const GITHUB_OWNER = 'masturbek-lgbtq';
-const GITHUB_REPO = 'HelpTool';
-const APP_VERSION_FILE = path.join(__dirname, '.app-version.json');
-
 function fetchGithubBuffer(urlStr, timeoutMs = 15000, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 3) {
@@ -1966,19 +2027,6 @@ function fetchGithubBuffer(urlStr, timeoutMs = 15000, redirects = 0) {
 async function fetchGithubJson(urlStr, timeoutMs = 10000) {
   const buf = await fetchGithubBuffer(urlStr, timeoutMs);
   return JSON.parse(buf.toString('utf8'));
-}
-
-function readLocalAppVersion() {
-  try {
-    if (!fs.existsSync(APP_VERSION_FILE)) return { commitSha: '', fileShas: {} };
-    const parsed = JSON.parse(fs.readFileSync(APP_VERSION_FILE, 'utf8'));
-    return {
-      commitSha: typeof parsed.commitSha === 'string' ? parsed.commitSha.trim() : '',
-      fileShas: parsed.fileShas && typeof parsed.fileShas === 'object' ? parsed.fileShas : {},
-    };
-  } catch {
-    return { commitSha: '', fileShas: {} };
-  }
 }
 
 function writeLocalAppVersion(data) {
@@ -2129,11 +2177,16 @@ async function applyGithubDirectUpdate() {
       nextFileShas[file.relPath] = file.sha;
       if (/^(bot|db|parser)\.js$/i.test(file.relPath)) jsChanged = true;
     }
-    writeLocalAppVersion({
+    const nextVersionObj = {
+      edition: localVer.edition || (fs.existsSync(path.join(__dirname, '.git')) ? '' : 'friend'),
       commitSha: remoteSha,
       fileShas: nextFileShas,
       updatedAt: new Date().toISOString(),
-    });
+    };
+    if (typeof localVer.schoolEnabled === 'boolean') {
+      nextVersionObj.schoolEnabled = localVer.schoolEnabled;
+    }
+    writeLocalAppVersion(nextVersionObj);
   } catch (err) {
     return { ok: false, error: `Ошибка записи обновления: ${err.message}` };
   }
@@ -2433,14 +2486,16 @@ function startWebServer() {
           allSettings.has_bot_token = hasBotToken;
           allSettings.bot_username = telegramBotUsername;
 
+          const schoolOn = isSchoolEnabled();
           sendJson(res, 200, {
             todayStr: today,
             nowTimeStr: toTimeStr(),
             isoDay: getIsoDayOfWeek(today),
             weekType: getWeekTypeForDate(today),
+            features: { school: schoolOn },
             settings: allSettings,
-            todayLessons: getLessonsForDate(today),
-            allLessons: getAllLessons(),
+            todayLessons: schoolOn ? getLessonsForDate(today) : [],
+            allLessons: schoolOn ? getAllLessons() : [],
             todayHabits: getHabitsForDate(today),
             habitsGrid: getHabitsHistoryGrid(14, today),
             overduePlans: getOverdueDailyPlans(today),
@@ -2467,6 +2522,10 @@ function startWebServer() {
         }
 
         // Уроки API
+        if (pathname.startsWith('/api/lessons/') && !isSchoolEnabled()) {
+          sendJson(res, 404, { error: 'Раздел расписания отключён в этой версии' });
+          return;
+        }
         if (pathname === '/api/lessons/add') {
           const item = addLesson(body);
           sendJson(res, 200, { ok: true, item });
@@ -2785,17 +2844,16 @@ function startCloudflareTunnel() {
 
 async function registerCommands() {
   try {
-    await callApi('setMyCommands', {
-      commands: [
-        { command: 'today', description: 'Обзор дня' },
-        { command: 'lessons', description: 'Школьное расписание' },
-        { command: 'daily', description: 'Дневные задания' },
-        { command: 'plans', description: 'Общие глобальные планы' },
-        { command: 'habits', description: 'База привычек' },
-        { command: 'books', description: 'База книг' },
-        { command: 'pause', description: 'Пауза и режим тишины' },
-      ],
-    });
+    const commands = [
+      { command: 'today', description: 'Обзор дня' },
+      ...(isSchoolEnabled() ? [{ command: 'lessons', description: 'Школьное расписание' }] : []),
+      { command: 'daily', description: 'Дневные задания' },
+      { command: 'plans', description: 'Общие глобальные планы' },
+      { command: 'habits', description: 'База привычек' },
+      { command: 'books', description: 'База книг' },
+      { command: 'pause', description: 'Пауза и режим тишины' },
+    ];
+    await callApi('setMyCommands', { commands });
   } catch (err) {
     console.error('Ошибка регистрации команд:', err.message);
   }
