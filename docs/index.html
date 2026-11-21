@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Помощник" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#f5f4f8" id="metaThemeColor" />
+  <title>Помощник</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png" />
+  <link rel="stylesheet" href="./css/app.css" />
+</head>
+<body>
+  <div class="bg-watermark" id="bgWatermark"></div>
+  <div class="bg-scrim" id="bgScrim"></div>
+  <canvas class="fx-canvas" id="fxCanvas"></canvas>
+
+  <!-- ЭКРАН ЗАЩИТЫ PIN-КОДОМ -->
+  <div class="lock-screen" id="lockScreen" role="dialog" aria-modal="true" aria-label="Вход по PIN-коду">
+    <div class="lock-card">
+      <div class="lock-avatar" id="lockAvatar"></div>
+      <div>
+        <div class="lock-title" id="lockTitle">Введите PIN-код</div>
+        <div class="lock-sub" id="lockSub">Записи защищены шифрованием на устройстве</div>
+      </div>
+      <div class="pin-dots" id="pinDots"></div>
+      <div class="numpad" id="lockNumpad">
+        <button type="button" class="num-key" data-pin-key="1">1</button>
+        <button type="button" class="num-key" data-pin-key="2">2</button>
+        <button type="button" class="num-key" data-pin-key="3">3</button>
+        <button type="button" class="num-key" data-pin-key="4">4</button>
+        <button type="button" class="num-key" data-pin-key="5">5</button>
+        <button type="button" class="num-key" data-pin-key="6">6</button>
+        <button type="button" class="num-key" data-pin-key="7">7</button>
+        <button type="button" class="num-key" data-pin-key="8">8</button>
+        <button type="button" class="num-key" data-pin-key="9">9</button>
+        <button type="button" class="num-key ghost" id="btnPinCancelOrReset">Сброс</button>
+        <button type="button" class="num-key" data-pin-key="0">0</button>
+        <button type="button" class="num-key ghost" data-pin-key="back">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <!-- БОКОВОЕ МЕНЮ (iPad / ПК) -->
+    <aside class="sidebar">
+      <div class="side-top">
+        <div class="anime-card" id="sideAnimeCard" title="Сменить тему оформления">
+          <div class="anime-poster" id="sideAnimePoster">
+            <img id="heroArtImg" src="./assets/gallery/art-02.jpg" alt="Тема оформления" />
+          </div>
+          <div class="anime-meta">
+            <span class="anime-name" id="sideSkinName">Готика · Черепа</span>
+            <span class="anime-chip">✦ 16 тем</span>
+          </div>
+        </div>
+
+        <nav class="side-nav" id="sideNav">
+          <button type="button" class="side-btn active" data-view="overview">
+            <span>Обзор дня</span>
+            <span class="side-cnt">Сегодня</span>
+          </button>
+          <button type="button" class="side-btn" data-view="daily">
+            <span>Дневные задания</span>
+            <span class="side-cnt" id="cntDaily">0</span>
+          </button>
+          <button type="button" class="side-btn" data-view="goals">
+            <span>Общие планы</span>
+            <span class="side-cnt" id="cntGoals">0</span>
+          </button>
+          <button type="button" class="side-btn" data-view="habits">
+            <span>База привычек</span>
+            <span class="side-cnt" id="cntHabits">0</span>
+          </button>
+          <button type="button" class="side-btn" data-view="books">
+            <span>Книги</span>
+            <span class="side-cnt" id="cntBooks">0</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="side-foot">
+        <button type="button" class="status-dot-btn" id="btnSecurityPill">○ Без PIN</button>
+        <button type="button" class="status-dot-btn" id="btnOpenSettingsSide">⚙ Настройки</button>
+      </div>
+    </aside>
+
+    <!-- РАБОЧАЯ ОБЛАСТЬ -->
+    <main class="workspace">
+      <!-- Компактная шапка для iPhone -->
+      <header class="mobile-header">
+        <div class="mob-left">
+          <div class="mob-avatar" id="mobAvatarBtn" title="Сменить тему">
+            <img id="mobArtImg" src="./assets/gallery/art-02.jpg" alt="Тема" />
+          </div>
+          <div style="min-width:0;">
+            <div class="mob-title" id="mobDateTitle">Сегодня</div>
+            <div class="mob-sub" id="mobSkinSub">Готика · Черепа</div>
+          </div>
+        </div>
+        <div class="mob-actions">
+          <button type="button" class="btn" id="btnMobLock" style="display:none; padding:5px 8px;" title="Заблокировать PIN">🔒</button>
+          <button type="button" class="btn" id="btnMobThemes" style="padding:5px 9px;">✦ Темы</button>
+          <button type="button" class="btn" id="btnMobAppUpdate" style="padding:5px 9px;" title="Проверить обновление">↻</button>
+          <button type="button" class="btn" id="btnMobSettings" style="padding:5px 9px;" title="Настройки">⚙</button>
+        </div>
+      </header>
+
+      <!-- Подсказка установки на рабочий стол iPhone -->
+      <div class="ios-install-banner" id="iosInstallBanner">
+        <div class="ios-install-text">
+          Поставьте как приложение: нажмите <b>Поделиться ↑</b> внизу Safari → <b>«На экран „Домой“»</b>.
+        </div>
+        <button type="button" class="btn btn-ghost" id="btnDismissInstall">×</button>
+      </div>
+
+      <!-- Верхняя панель -->
+      <div class="topbar">
+        <div class="top-left">
+          <div class="top-title" id="hdrDate">Сегодня</div>
+          <div class="top-sub" id="hdrSub">Загрузка...</div>
+        </div>
+        <div class="top-quote" id="heroQuote" title="Нажмите для следующей реплики">
+          <div class="chibi-wrap" id="chibiWrap"></div>
+          <div class="top-quote-content">
+            <div class="top-quote-head">
+              <span class="top-quote-author" id="heroQuoteAuthor">Персонаж</span>
+              <span class="top-quote-hint" id="heroQuoteCount">1/1</span>
+            </div>
+            <div class="top-quote-text" id="heroQuoteText"></div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <div class="focus-pill" id="focusPill">
+            <span id="focusClock">25:00</span>
+            <span class="focus-pill-title" id="focusTaskLabel">Фокус</span>
+            <button type="button" class="focus-ctrl" id="focusPauseBtn" title="Пауза">❚❚</button>
+            <button type="button" class="focus-ctrl" id="focusStopBtn" title="Закрыть таймер">×</button>
+          </div>
+          <div class="theme-stepper">
+            <button type="button" class="stepper-arrow" id="btnSkinPrev" title="Предыдущая тема">◀</button>
+            <button type="button" class="stepper-label" id="topSkinBtn">Тема</button>
+            <button type="button" class="stepper-arrow" id="btnSkinNext" title="Следующая тема">▶</button>
+          </div>
+          <button type="button" class="pill-btn primary" id="btnQuickToggle">+ Быстро добавить</button>
+          <button type="button" class="icon-pill" id="btnTopLock" style="display:none;" title="Заблокировать PIN">🔒</button>
+          <button type="button" class="icon-pill" id="btnAppUpdate" title="Проверить обновление">↻</button>
+        </div>
+      </div>
+
+      <!-- Быстрый ввод -->
+      <div class="quick-drawer" id="quickDrawer">
+        <form class="quick-form" id="quickForm">
+          <input type="text" id="quickInput" class="input" placeholder="Например: «в 18:00 тренировка», «книга Дюна», «цель: портфолио»" autocomplete="off" />
+          <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Добавить</button>
+          <button type="button" class="btn btn-ghost" id="btnQuickClose">×</button>
+        </form>
+        <div class="quick-hint">
+          Распознаёт задания с датой и временем, общие планы, книги («книга ...», «читаю ...», «прочитал ...») и отметки привычек.
+        </div>
+      </div>
+
+      <!-- Баннер статуса / переноса -->
+      <div class="toast-banner" id="guessBanner">
+        <div class="toast-top">
+          <span id="guessText">Сохранено</span>
+          <button type="button" class="btn btn-ghost" id="btnHideToast">×</button>
+        </div>
+        <div class="toast-actions" id="guessActions"></div>
+      </div>
+
+      <!-- 1. ОБЗОР ДНЯ (BENTO 2x2) -->
+      <section class="view-pane active" id="view-overview">
+        <div class="bento-grid">
+          <div class="bento-col">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">Дневные задания</span>
+                <div class="card-head-right">
+                  <span class="card-meta" id="ovDailyMeta"></span>
+                  <button type="button" class="btn-link" data-jump-view="daily">Все дни →</button>
+                </div>
+              </div>
+              <div id="ovOverdueBox"></div>
+              <div id="ovDailyList"></div>
+              <form class="inline-add" id="ovDailyForm">
+                <input type="text" id="ovDailyInput" class="input" placeholder="+ Новое задание на сегодня..." autocomplete="off" />
+                <input type="time" id="ovDailyTime" class="input" style="width:98px; flex:0 0 98px;" title="Время напоминания" />
+                <button type="submit" class="btn btn-primary" style="flex:0 0 auto; padding:6px 12px;">+</button>
+              </form>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">Общие планы</span>
+                <div class="card-head-right">
+                  <button type="button" class="btn-link" data-jump-view="goals">Все планы →</button>
+                </div>
+              </div>
+              <div id="ovGoalsList"></div>
+            </div>
+          </div>
+
+          <div class="bento-col">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">База привычек</span>
+                <div class="card-head-right">
+                  <span class="card-meta" id="ovHabitsMeta"></span>
+                  <button type="button" class="btn-link" data-jump-view="habits">14 дней →</button>
+                </div>
+              </div>
+              <div id="ovHabitsWrap"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">Книги</span>
+                <div class="card-head-right">
+                  <button type="button" class="btn-link" data-jump-view="books">Открыть базу →</button>
+                </div>
+              </div>
+              <div id="ovBooksWrap"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. ДНЕВНЫЕ ЗАДАНИЯ -->
+      <section class="view-pane" id="view-daily">
+        <div class="card card-mb">
+          <div class="card-head">
+            <span class="card-title">Новое дневное задание</span>
+            <span class="card-meta">Нажмите 📅 на задаче, чтобы добавить её в Календарь iPhone</span>
+          </div>
+          <form class="form-box form-row" id="dailyAddForm">
+            <input type="text" id="dailyTitle" class="input" placeholder="Что нужно сделать..." required style="flex:2 1 200px;" />
+            <input type="date" id="dailyDate" class="input" style="flex:0 1 150px;" />
+            <input type="time" id="dailyTime" class="input" style="flex:0 1 115px;" />
+            <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Добавить</button>
+          </form>
+        </div>
+        <div id="dailyOverdueSection"></div>
+        <div id="dailyGroupsSection"></div>
+      </section>
+
+      <!-- 3. ОБЩИЕ ПЛАНЫ -->
+      <section class="view-pane" id="view-goals">
+        <div class="section-bar">
+          <div class="pill-group" id="goalFiltersBar">
+            <button type="button" class="seg-pill active" data-gf="all">Все</button>
+            <button type="button" class="seg-pill" data-gf="priority">★ Важные</button>
+            <button type="button" class="seg-pill" data-gf="Учёба">Учёба</button>
+            <button type="button" class="seg-pill" data-gf="Проекты">Проекты</button>
+            <button type="button" class="seg-pill" data-gf="Личное">Личное</button>
+            <button type="button" class="seg-pill" data-gf="done">Закрытые</button>
+          </div>
+          <button type="button" class="btn btn-ghost" id="btnClearDoneGoals" style="display:none;">Очистить закрытые</button>
+        </div>
+
+        <div class="card card-mb">
+          <form class="form-box form-row" id="goalAddForm">
+            <input type="text" id="goalTitle" class="input" placeholder="Новая большая цель или идея..." required style="flex:2 1 200px;" />
+            <select id="goalCategory" class="input" style="flex:0 1 130px;">
+              <option value="">Без сферы</option>
+              <option value="Учёба">Учёба</option>
+              <option value="Проекты">Проекты</option>
+              <option value="Личное">Личное</option>
+            </select>
+            <label style="display:inline-flex; align-items:center; gap:5px; font-size:12.5px; flex:0 0 auto; cursor:pointer;">
+              <input type="checkbox" id="goalPriority" /> ★ Важное
+            </label>
+            <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Добавить</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div id="goalsListWrap"></div>
+        </div>
+      </section>
+
+      <!-- 4. БАЗА ПРИВЫЧЕК -->
+      <section class="view-pane" id="view-habits">
+        <div class="section-bar">
+          <span class="card-meta">Матрица прогресса за 14 дней (нажимайте на клетки)</span>
+          <button type="button" class="btn btn-primary" id="btnToggleAddHabit">+ Новая привычка</button>
+        </div>
+
+        <div class="card card-mb collapsible-panel" id="panelAddHabit">
+          <form class="form-box" id="habitAddForm" style="display:flex; flex-direction:column; gap:10px;">
+            <div class="form-row">
+              <input type="text" id="habTitle" class="input" placeholder="Название привычки (например: Вода, Тренировка)" required style="flex:2 1 180px;" />
+              <select id="habKind" class="input" style="flex:0 1 150px;">
+                <option value="check">Галочка (Да/Нет)</option>
+                <option value="value">Числовая цель</option>
+              </select>
+            </div>
+            <div class="form-row" id="habValueFields" style="display:none;">
+              <input type="text" id="habTarget" class="input" placeholder="Цель (например: 2)" />
+              <input type="text" id="habUnit" class="input" placeholder="Ед. изм. (л, мин, стр)" />
+            </div>
+            <div>
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Дни недели:</div>
+              <div class="weekday-picker" id="habWeekdays">
+                <button type="button" class="wd-pill on" data-d="1">Пн</button>
+                <button type="button" class="wd-pill on" data-d="2">Вт</button>
+                <button type="button" class="wd-pill on" data-d="3">Ср</button>
+                <button type="button" class="wd-pill on" data-d="4">Чт</button>
+                <button type="button" class="wd-pill on" data-d="5">Пт</button>
+                <button type="button" class="wd-pill on" data-d="6">Сб</button>
+                <button type="button" class="wd-pill on" data-d="7">Вс</button>
+              </div>
+            </div>
+            <div>
+              <button type="submit" class="btn btn-primary">Сохранить привычку</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card" id="habitsMatrixCard"></div>
+      </section>
+
+      <!-- 5. КНИГИ -->
+      <section class="view-pane" id="view-books">
+        <div class="section-bar">
+          <div class="pill-group" id="bookFiltersBar">
+            <button type="button" class="seg-pill active" data-bf="all">Все</button>
+            <button type="button" class="seg-pill" data-bf="reading">Читаю</button>
+            <button type="button" class="seg-pill" data-bf="planned">В планах</button>
+            <button type="button" class="seg-pill" data-bf="done">Прочитано</button>
+          </div>
+        </div>
+
+        <div class="card card-mb">
+          <form class="form-box form-row" id="bookAddForm">
+            <input type="text" id="bookTitle" class="input" placeholder="Название книги" required style="flex:2 1 170px;" />
+            <input type="text" id="bookAuthor" class="input" placeholder="Автор (по желанию)" style="flex:1 1 140px;" />
+            <select id="bookStatus" class="input" style="flex:0 1 135px;">
+              <option value="planned">В планах</option>
+              <option value="reading">Читаю сейчас</option>
+              <option value="done">Прочитана</option>
+            </select>
+            <input type="text" id="bookNote" class="input" placeholder="Заметка или страница" style="flex:1 1 140px;" />
+            <select id="bookRating" class="input" style="flex:0 1 110px;">
+              <option value="0">Без оценки</option>
+              <option value="5">★★★★★</option>
+              <option value="4">★★★★</option>
+              <option value="3">★★★</option>
+              <option value="2">★★</option>
+              <option value="1">★</option>
+            </select>
+            <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Добавить</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div id="booksListWrap"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- НИЖНЯЯ НАВИГАЦИЯ IPHONE (5 РАЗДЕЛОВ) -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-grid" id="mobileNav">
+      <button type="button" class="mob-nav-btn active" data-view="overview">
+        <span class="ico">◉</span><span>Обзор</span>
+      </button>
+      <button type="button" class="mob-nav-btn" data-view="daily">
+        <span class="ico">✓</span><span>Задания</span>
+      </button>
+      <button type="button" class="mob-nav-btn" data-view="goals">
+        <span class="ico">★</span><span>Планы</span>
+      </button>
+      <button type="button" class="mob-nav-btn" data-view="habits">
+        <span class="ico">↻</span><span>Привычки</span>
+      </button>
+      <button type="button" class="mob-nav-btn" data-view="books">
+        <span class="ico">▤</span><span>Книги</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- СТУДИЯ ОФОРМЛЕНИЯ, ЗАЩИТЫ И НАСТРОЕК -->
+  <div class="studio-backdrop" id="studioModal">
+    <div class="studio-sheet">
+      <div class="studio-top">
+        <div class="studio-tabs">
+          <button type="button" class="seg-pill active" id="stTabBtnThemes">✦ 16 тем</button>
+          <button type="button" class="seg-pill" id="stTabBtnSettings">⚙ Защита и настройки</button>
+        </div>
+        <span class="studio-toast" id="studioToast">● Сохранено</span>
+        <button type="button" class="btn btn-ghost" id="btnCloseStudio">✕</button>
+      </div>
+
+      <div class="studio-body" id="studioPaneThemes">
+        <div class="pill-group" id="skinFilterBar">
+          <button type="button" class="seg-pill active" data-sc="all">Все (16)</button>
+          <button type="button" class="seg-pill" data-sc="anime">Аниме</button>
+          <button type="button" class="seg-pill" data-sc="games">Игры</button>
+          <button type="button" class="seg-pill" data-sc="dark">Тёмные</button>
+          <button type="button" class="seg-pill" data-sc="light">Светлые</button>
+        </div>
+        <div class="skins-grid" id="skinsGrid"></div>
+      </div>
+
+      <div class="studio-body" id="studioPaneSettings" style="display:none;">
+        <!-- Защита PIN и шифрование -->
+        <div class="tweak-bar">
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Защита PIN-кодом и шифрование</span>
+              <span class="tweak-sub" id="stPinStatusSub">Записи хранятся локально на вашем iPhone</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn btn-primary" id="stPinToggleBtn">Включить PIN</button>
+            </div>
+          </div>
+          <div class="tweak-row" id="stAutoLockRow" style="display:none;">
+            <div>
+              <span class="tweak-label">Автоблокировка при сворачивании</span>
+              <span class="tweak-sub">Через сколько секунд закрывать экран замком</span>
+            </div>
+            <div class="pill-group" id="stAutoLockPills">
+              <button type="button" class="seg-pill" data-lock="0">Сразу</button>
+              <button type="button" class="seg-pill" data-lock="60">1 мин</button>
+              <button type="button" class="seg-pill" data-lock="300">5 мин</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Резервные копии в Файлы iPhone -->
+        <div class="tweak-bar">
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Резервная копия в «Файлы» iPhone</span>
+              <span class="tweak-sub" id="stBackupStatusSub">Рекомендуем сохранять копию раз в пару недель</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary" id="btnExportBackup">Сохранить копию</button>
+            <button type="button" class="btn" id="btnImportBackup">Восстановить из файла</button>
+            <input type="file" id="importFileInput" accept=".json,application/json" style="display:none;" />
+          </div>
+        </div>
+
+        <!-- Интерфейс и эффекты -->
+        <div class="tweak-bar">
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Анимация и частицы</span>
+              <span class="tweak-sub">Дыхание обоев, моргание мини-персонажа и эффекты тем</span>
+            </div>
+            <button type="button" class="btn btn-primary" id="stFxBtn">● Вкл</button>
+          </div>
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Милые звуки интерфейса</span>
+              <span class="tweak-sub">Мягкие отклики при кликах, задачах и таймере фокуса</span>
+            </div>
+            <button type="button" class="btn btn-primary" id="stSoundBtn">● Вкл</button>
+          </div>
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Режим паузы (заморозка серий)</span>
+              <span class="tweak-sub">Серии привычек не сбросятся во время отдыха</span>
+            </div>
+            <button type="button" class="btn" id="stPauseAllBtn">Выкл</button>
+          </div>
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Обновление приложения</span>
+              <span class="tweak-sub">Проверка свежей версии без потери ваших записей</span>
+            </div>
+            <button type="button" class="btn" id="stCheckUpdateBtn">↻ Проверить</button>
+          </div>
+        </div>
+
+        <!-- Установка и сброс -->
+        <div class="tweak-bar">
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Приватность и память</span>
+              <span class="tweak-sub" id="stPrivacyMeta">100% локально · Без отправки данных на серверы</span>
+            </div>
+            <button type="button" class="btn btn-danger" id="btnWipeAll">Очистить всё</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./js/crypto.js"></script>
+  <script src="./js/parser.js"></script>
+  <script src="./js/calendar.js"></script>
+  <script src="./js/storage.js"></script>
+  <script src="./js/themes.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
