@@ -374,7 +374,7 @@ namespace PersonalAssistantDesktop
             var menu = new ContextMenuStrip();
             menu.Items.Add("Открыть Помощник", null, (s, e) => ShowMainWindow());
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("Пауза только на уроки (вкл/выкл)", null, (s, e) => TogglePauseSetting("pause_lessons", "Пауза только на уроки"));
+            menu.Items.Add("Пауза на график (вкл/выкл)", null, (s, e) => TogglePauseSetting("pause_lessons", "Пауза на график"));
             menu.Items.Add("Полная тишина (вкл/выкл)", null, (s, e) => TogglePauseSetting("pause_all", "Полная тишина"));
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Полный выход (остановить бота)", null, (s, e) => StopBotAndExit());

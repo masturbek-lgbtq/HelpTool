@@ -13,9 +13,9 @@
         daily:  { enabled: true, title: 'Дневные задания', navTitle: 'Дневные задания', mobTitle: 'Задания' },
         goals:  { enabled: true, title: 'Общие планы',     navTitle: 'Общие планы',     mobTitle: 'Планы' },
         habits: { enabled: true, title: 'База привычек',   navTitle: 'База привычек',   mobTitle: 'Привычки' },
-        books:  { enabled: true, title: 'Книги',           navTitle: 'Книги',           mobTitle: 'Книги' },
+        books:  { enabled: true, title: 'Книги и материалы', navTitle: 'Книги',         mobTitle: 'Книги' },
       },
-      categories: ['Учёба', 'Домашка', 'Проекты', 'Личное'],
+      categories: ['Проекты', 'Работа', 'Развитие', 'Личное'],
     },
     work: {
       id: 'work',
@@ -302,11 +302,11 @@
     root.style.setProperty('--accent-soft', `rgba(${ar}, ${ag}, ${ab}, ${isDark ? 0.18 : 0.12})`);
     const accentLuma = 0.299 * ar + 0.587 * ag + 0.114 * ab;
     root.style.setProperty('--accent-ink', accentLuma > 180 ? '#111114' : '#ffffff');
-    const bgAbsUrl = !skin.img ? '' : (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : new URL(skin.img, window.location.href).href;
+    const bgAbsUrl = !skin.img ? '' : (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : `${new URL(skin.img, window.location.href).href}?v=hd6`;
     root.style.setProperty('--wallpaper-url', bgAbsUrl ? `url('${bgAbsUrl}')` : 'none');
     root.style.setProperty('--wallpaper-pos', skin.cropPos || '50% 20%');
-    root.style.setProperty('--wallpaper-opacity', bgAbsUrl ? (isDark ? '0.26' : '0.18') : '0');
-    root.style.setProperty('--scrim-bg', `rgba(${br}, ${bg}, ${bb}, ${isDark ? 0.74 : 0.82})`);
+    root.style.setProperty('--wallpaper-opacity', bgAbsUrl ? (isDark ? '0.44' : '0.34') : '0');
+    root.style.setProperty('--scrim-bg', `rgba(${br}, ${bg}, ${bb}, ${isDark ? 0.62 : 0.72})`);
 
     const metaTheme = document.getElementById('metaThemeColor');
     if (metaTheme) metaTheme.setAttribute('content', c.bg);
@@ -1852,7 +1852,7 @@
         { key: 'daily',  hint: 'Задачи с датой, временем и отправкой в Календарь iPhone' },
         { key: 'goals',  hint: 'Большие цели и проекты по вашим категориям' },
         { key: 'habits', hint: 'Трекер привычек с матрицей за 14 дней' },
-        { key: 'books',  hint: 'Полка чтения, фильмов, курсов или игр со статусами' },
+        { key: 'books',  hint: 'Полка чтения, фильмов, материалов или игр со статусами' },
       ];
       secListEl.innerHTML = order
         .map(({ key, hint }) => {

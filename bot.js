@@ -421,14 +421,14 @@ function buildTodayView() {
   if (pauseAll) {
     lines.push(`<i>× Включена полная тишина</i>`);
   } else if (pauseLessons) {
-    lines.push(`<i>◐ Уроки на паузе (каникулы / болезнь)</i>`);
+    lines.push(`<i>◐ График на паузе</i>`);
   }
 
-  // 1. Уроки (только если включён школьный раздел)
+  // 1. График и слоты
   if (schoolOn) {
-    lines.push(``, `<b>Школьное расписание</b>`);
+    lines.push(``, `<b>График и слоты</b>`);
     if (lessons.length === 0) {
-      lines.push(`<i>Сегодня уроков нет</i>`);
+      lines.push(`<i>На сегодня слотов нет</i>`);
     } else {
       for (const l of lessons) {
         const sym = l.is_cancelled_today ? '×' : '●';
@@ -551,16 +551,16 @@ function buildLessonsView(selectedDay = getIsoDayOfWeek()) {
   const lessons = getLessonsForDay(day, mode2 ? currentWt : 0);
 
   const lines = [
-    `<b>Расписание · ${DAY_NAMES_FULL[day]}</b>${mode2 ? ` (${currentWt === 1 ? 'Верхняя 1' : 'Нижняя 2'})` : ''}`,
+    `<b>График · ${DAY_NAMES_FULL[day]}</b>${mode2 ? ` (${currentWt === 1 ? 'Неделя 1' : 'Неделя 2'})` : ''}`,
   ];
   if (pauseLessons) {
-    lines.push(`<i>◐ Уведомления об уроках на паузе</i>`);
+    lines.push(`<i>◐ Уведомления по графику на паузе</i>`);
   }
   lines.push('');
 
   if (lessons.length === 0) {
-    lines.push(`<i>На этот день уроков нет.</i>`);
-    lines.push(`<i>Отправьте список текстом, фото расписания или добавьте урок кнопкой ниже.</i>`);
+    lines.push(`<i>На этот день слотов нет.</i>`);
+    lines.push(`<i>Отправьте список текстом, фото графика или добавьте слот кнопкой ниже.</i>`);
   } else {
     for (const l of lessons) {
       const cancelled = isToday && l.cancelled_date === today;
@@ -606,13 +606,13 @@ function buildLessonsView(selectedDay = getIsoDayOfWeek()) {
   }
 
   inline_keyboard.push([
-    { text: '+ Урок', callback_data: `les_add:${day}` },
+    { text: '+ Слот', callback_data: `les_add:${day}` },
     { text: 'Загрузить список / фото', callback_data: `les_import:${day}` },
   ]);
 
   const modeRow = [
     {
-      text: pauseLessons ? '● Снять паузу уроков' : '○ Пауза на уроки',
+      text: pauseLessons ? '● Снять паузу графика' : '○ Пауза на график',
       callback_data: `les_pause:${day}`,
     },
     {
@@ -852,7 +852,7 @@ function buildPauseView() {
   const lines = [`<b>Пауза и уведомления</b>`, ``];
   if (schoolOn) {
     lines.push(
-      `Уроки: <b>${pauseLessons || pauseAll ? 'На паузе' : `Активны (за ${leadMin} мин до начала)`}</b>`
+      `График: <b>${pauseLessons || pauseAll ? 'На паузе' : `Активен (за ${leadMin} мин до начала)`}</b>`
     );
   }
   lines.push(`Общий режим: <b>${pauseAll ? 'Полная тишина' : 'Активен'}</b>`);
@@ -863,8 +863,8 @@ function buildPauseView() {
     inline_keyboard.push([
       {
         text: pauseLessons
-          ? '[ ● Пауза только на уроки ]'
-          : '○ Пауза только на уроки (каникулы / болезнь)',
+          ? '[ ● Пауза на почасовой график ]'
+          : '○ Пауза на почасовой график',
         callback_data: 'pause_tog:lessons',
       },
     ]);
@@ -951,8 +951,8 @@ function executeSmartCapture(rawText, mediaType = '', mediaFileId = '') {
       meta: { count: classified.lessons.length },
     });
     return {
-      summary: `Добавлено уроков в расписание: ${classified.lessons.length}`,
-      html: `● <b>Расписание обновлено</b>\nДобавлено уроков: <b>${classified.lessons.length}</b>`,
+      summary: `Добавлено слотов в график: ${classified.lessons.length}`,
+      html: `● <b>График обновлён</b>\nДобавлено слотов: <b>${classified.lessons.length}</b>`,
       event: ev,
       item: classified.lessons,
     };
@@ -1136,10 +1136,10 @@ async function handleMessage(msg) {
     return;
   }
 
-  if (text === 'Расписание' || text === 'Уроки' || text === '/lessons') {
+  if (text === 'Расписание' || text === 'График' || text === '/lessons') {
     userSessions.delete(userId);
     if (!isSchoolEnabled()) {
-      await sendMessage(chatId, `Раздел школьного расписания отключён в этой версии.`, {
+      await sendMessage(chatId, `Раздел почасового графика отключён в настройках.`, {
         reply_markup: getMainReplyKeyboard(),
       });
       return;
@@ -1247,7 +1247,7 @@ async function handleMessage(msg) {
       const view = buildLessonsView(session.day);
       await sendMessage(
         chatId,
-        `● Добавлено уроков: <b>${parsed.length}</b>\n\n${view.text}`,
+        `● Добавлено слотов: <b>${parsed.length}</b>\n\n${view.text}`,
         { reply_markup: view.reply_markup }
       );
       return;
@@ -1334,7 +1334,7 @@ async function handleMessage(msg) {
     const fileId = bestPhoto.file_id;
     const schoolOn = isSchoolEnabled();
     const isScheduleIntent =
-      schoolOn && (session?.step === 'IMPORT_SCHEDULE' || /расписани|урок/i.test(text));
+      schoolOn && (session?.step === 'IMPORT_SCHEDULE' || /расписани|график|слот/i.test(text));
 
     if (isScheduleIntent) {
       userSessions.delete(userId);
@@ -1342,19 +1342,19 @@ async function handleMessage(msg) {
       if (!geminiKey) {
         await sendMessage(
           chatId,
-          `Для чтения расписания со скриншота нужен ключ Google Gemini (команда <code>/key ВАШ_КЛЮЧ</code> или в настройках на экране).\n\nЛибо просто отправьте расписание списком в чат, например:\n<code>Понедельник\n08:30 Алгебра каб. 204\n09:25 Физика</code>`
+          `Для чтения графика со скриншота нужен ключ Google Gemini (команда <code>/key ВАШ_КЛЮЧ</code> или в настройках на экране).\n\nЛибо просто отправьте график списком в чат, например:\n<code>Понедельник\n10:00 Планерка\n14:00 Созвон</code>`
         );
         return;
       }
       try {
-        await sendMessage(chatId, `<i>Распознаю расписание с изображения...</i>`);
+        await sendMessage(chatId, `<i>Распознаю график с изображения...</i>`);
         const b64 = await downloadTelegramFileBase64(fileId);
         const lessons = await parseScheduleImageWithGemini(b64, 'image/jpeg', text);
         for (const l of lessons) addLesson(l);
         const view = buildLessonsView(lessons[0]?.day_of_week || getIsoDayOfWeek());
         await sendMessage(
           chatId,
-          `● Распознано и добавлено уроков: <b>${lessons.length}</b>\n\n${view.text}`,
+          `● Распознано и добавлено слотов: <b>${lessons.length}</b>\n\n${view.text}`,
           { reply_markup: view.reply_markup }
         );
       } catch (err) {
@@ -1501,7 +1501,7 @@ async function handleCallbackQuery(cb) {
       await editMessageText(
         chatId,
         messageId,
-        `● Распознано уроков: <b>${lessons.length}</b>\n\n${view.text}`,
+        `● Распознано слотов: <b>${lessons.length}</b>\n\n${view.text}`,
         { reply_markup: view.reply_markup }
       );
     } catch (err) {
@@ -1510,14 +1510,14 @@ async function handleCallbackQuery(cb) {
     return;
   }
 
-  // Уроки
+  // График и слоты
   if (action === 'les_can') {
     const id = parseInt(parts[1], 10);
     const day = parseInt(parts[2] || String(getIsoDayOfWeek()), 10);
     const updated = toggleCancelLessonForDate(id, toDateStr());
     await answerCallbackQuery(
       cb.id,
-      updated?.cancelled_date ? 'Урок отменен на сегодня' : 'Урок возвращен'
+      updated?.cancelled_date ? 'Слот отменён на сегодня' : 'Слот возвращён'
     );
     const view = buildLessonsView(day);
     await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
@@ -1528,7 +1528,7 @@ async function handleCallbackQuery(cb) {
     const id = parseInt(parts[1], 10);
     const day = parseInt(parts[2] || String(getIsoDayOfWeek()), 10);
     deleteLesson(id);
-    await answerCallbackQuery(cb.id, 'Урок удален');
+    await answerCallbackQuery(cb.id, 'Слот удалён');
     const view = buildLessonsView(day);
     await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
     return;
@@ -1540,7 +1540,7 @@ async function handleCallbackQuery(cb) {
     setSetting('pause_lessons', cur ? '0' : '1');
     await answerCallbackQuery(
       cb.id,
-      cur ? 'Уведомления об уроках включены' : 'Уроки поставлены на паузу'
+      cur ? 'Уведомления по графику включены' : 'График поставлен на паузу'
     );
     const view = buildLessonsView(day);
     await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
@@ -1562,7 +1562,7 @@ async function handleCallbackQuery(cb) {
     const nextWt = toggleCurrentWeekType(toDateStr());
     await answerCallbackQuery(
       cb.id,
-      nextWt === 1 ? 'Текущая неделя: Верхняя (1)' : 'Текущая неделя: Нижняя (2)'
+      nextWt === 1 ? 'Текущая неделя: 1' : 'Текущая неделя: 2'
     );
     const view = buildLessonsView(day);
     await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
@@ -1575,7 +1575,7 @@ async function handleCallbackQuery(cb) {
     await answerCallbackQuery(cb.id);
     await sendMessage(
       chatId,
-      `<b>Новый урок · ${DAY_NAMES_FULL[day]}</b>\n\nНапишите время, предмет, кабинет и ссылку (если есть) одной строкой:\n<code>08:30 Алгебра каб. 204</code>\nили\n<code>10:00 Английский https://zoom.us/...</code>`
+      `<b>Новый слот · ${DAY_NAMES_FULL[day]}</b>\n\nНапишите время, название, место и ссылку (если есть) одной строкой:\n<code>10:00 Планерка</code>\nили\n<code>14:00 Созвон https://zoom.us/...</code>`
     );
     return;
   }
@@ -1586,7 +1586,7 @@ async function handleCallbackQuery(cb) {
     await answerCallbackQuery(cb.id);
     await sendMessage(
       chatId,
-      `<b>Загрузка расписания</b>\n\nОтправьте список уроков текстом (на один день или всю неделю) или пришлите скриншот расписания:\n\n<code>Понедельник\n08:30 Алгебра каб. 204\n09:25 Физика\n\nВторник\n08:30 История</code>`
+      `<b>Загрузка графика</b>\n\nОтправьте список слотов текстом (на один день или всю неделю) или пришлите скриншот:\n\n<code>Понедельник\n10:00 Планерка\n14:00 Созвон\n\nВторник\n11:00 Фокус-блок</code>`
     );
     return;
   }
@@ -1765,7 +1765,7 @@ async function handleCallbackQuery(cb) {
   if (action === 'lead_set') {
     const mins = String(parseInt(parts[1], 10) || 2);
     setSetting('lesson_lead_minutes', mins);
-    await answerCallbackQuery(cb.id, `Напоминание за ${mins} мин до урока`);
+    await answerCallbackQuery(cb.id, `Напоминание за ${mins} мин до начала`);
     const view = buildPauseView();
     await editMessageText(chatId, messageId, view.text, { reply_markup: view.reply_markup });
     return;
@@ -1807,7 +1807,7 @@ async function runSchedulerTick() {
   const pauseLessons = schoolOn && getSetting('pause_lessons', '0') === '1';
   const leadMin = Math.max(1, parseInt(getSetting('lesson_lead_minutes', '2'), 10) || 2);
 
-  // 2. Уведомления об уроках (по умолчанию за 2 минуты до начала)
+  // 2. Уведомления по почасовому графику (по умолчанию за 2 минуты до начала)
   const todayLessons = schoolOn ? getLessonsForDate(today).filter((l) => !l.is_cancelled_today) : [];
 
   if (schoolOn && !pauseLessons) {
@@ -1822,35 +1822,35 @@ async function runSchedulerTick() {
         const whenLabel = diff > 0 ? `через ${diff} мин` : 'сейчас';
         const desktopRoom = lesson.room_or_note ? ` · ${lesson.room_or_note}` : '';
         pushDesktopAlert(
-          `Урок ${whenLabel} (${lesson.start_time})`,
+          `По графику ${whenLabel} (${lesson.start_time})`,
           `${lesson.subject}${desktopRoom}`,
           lesson.join_url || ''
         );
 
         if (ownerChatId && getActiveBotToken()) {
           const text = [
-            `<b>Урок ${whenLabel}</b> · <code>${lesson.start_time}</code>`,
+            `<b>По графику ${whenLabel}</b> · <code>${lesson.start_time}</code>`,
             `<b>${escapeHtml(lesson.subject)}</b>${room}`,
           ].join('\n');
 
           const inline_keyboard = [];
           if (lesson.join_url) {
-            inline_keyboard.push([{ text: 'Зайти на урок →', url: lesson.join_url }]);
+            inline_keyboard.push([{ text: 'Перейти по ссылке →', url: lesson.join_url }]);
           }
           inline_keyboard.push([
             {
-              text: 'Отменить этот урок сегодня',
+              text: 'Отменить слот на сегодня',
               callback_data: `les_can:${lesson.id}:${lesson.day_of_week}`,
             },
             {
-              text: 'Пауза на уроки',
+              text: 'Пауза на график',
               callback_data: `les_pause:${lesson.day_of_week}`,
             },
           ]);
 
           await sendMessage(ownerChatId, text, {
             reply_markup: { inline_keyboard },
-          }).catch((err) => console.error('Ошибка отправки уведомления об уроке:', err.message));
+          }).catch((err) => console.error('Ошибка отправки уведомления по графику:', err.message));
         }
       }
     }
@@ -3038,7 +3038,7 @@ async function registerCommands() {
   try {
     const commands = [
       { command: 'today', description: 'Обзор дня' },
-      ...(isSchoolEnabled() ? [{ command: 'lessons', description: 'Школьное расписание' }] : []),
+      ...(isSchoolEnabled() ? [{ command: 'lessons', description: 'График и слоты' }] : []),
       { command: 'daily', description: 'Дневные задания' },
       { command: 'plans', description: 'Общие глобальные планы' },
       { command: 'habits', description: 'База привычек' },
@@ -3139,6 +3139,22 @@ async function ensureTelegramRunning() {
   return { ok: true, username: telegramBotUsername };
 }
 
+let lastNotifiedRemoteHash = '';
+
+async function checkBackgroundUpdateAlert() {
+  try {
+    const info = await checkRepoUpdates();
+    if (info && info.ok && info.hasUpdate && info.remoteHash && info.remoteHash !== lastNotifiedRemoteHash) {
+      lastNotifiedRemoteHash = info.remoteHash;
+      const msg = info.latestMsg ? ` (${info.latestMsg})` : '';
+      pushDesktopAlert(
+        'Доступно обновление Помощника',
+        `Вышла новая версия${msg}. Откройте окно программы и нажмите «Обновить сейчас».`
+      );
+    }
+  } catch {}
+}
+
 async function startApp() {
   startWebServer();
   cleanupExpiredPlans(toDateStr());
@@ -3148,6 +3164,9 @@ async function startApp() {
       console.error('Ошибка планировщика:', err.message)
     );
   }, 15000);
+
+  setTimeout(() => checkBackgroundUpdateAlert(), 8000);
+  setInterval(() => checkBackgroundUpdateAlert(), 25 * 60 * 1000);
 
   if (getActiveBotToken()) {
     ensureTelegramRunning();

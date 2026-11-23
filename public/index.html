@@ -1931,7 +1931,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="/css/v31-motion-layout.css" />
+  <link rel="stylesheet" href="/css/v31-motion-layout.css?v=311" />
 </head>
 <body>
   <div class="bg-watermark" id="bgWatermark"></div>
@@ -1944,7 +1944,7 @@
       <div class="side-top">
         <div class="anime-card" id="sideAnimeCard" onclick="openStudio('themes')" title="Выбрать тему (16 артов)">
           <div class="anime-poster" id="sideAnimePoster">
-            <img id="heroArtImg" src="/gallery/art-02.jpg?v=hd5" alt="Аниме-тема" decoding="async" />
+            <img id="heroArtImg" src="/gallery/art-02.jpg?v=hd6" alt="Аниме-тема" decoding="async" />
           </div>
           <div class="anime-cap">
             <span class="anime-cap-name" id="sideSkinName">Готика · Черепа</span>
@@ -1958,7 +1958,7 @@
             <span class="side-cnt" id="cntOverview">Сегодня</span>
           </button>
           <button class="side-btn school-only" data-view="lessons" onclick="switchView('lessons')">
-            <span>Школьное расписание</span>
+            <span>График и слоты</span>
             <span class="side-cnt" id="cntLessons">0</span>
           </button>
           <button class="side-btn" data-view="daily" onclick="switchView('daily')">
@@ -1993,7 +1993,7 @@
       <header class="mobile-header">
         <div class="mob-left">
           <div class="mob-avatar" onclick="openStudio('themes')" title="Сменить тему">
-            <img id="mobArtImg" src="/gallery/art-02.jpg?v=hd5" alt="Тема" decoding="async" />
+            <img id="mobArtImg" src="/gallery/art-02.jpg?v=hd6" alt="Тема" decoding="async" />
           </div>
           <div style="min-width:0;">
             <div class="mob-title" id="mobDateTitle">Сегодня</div>
@@ -2070,10 +2070,10 @@
       <!-- ================= 1. ОБЗОР ДНЯ (BENTO) ================= -->
       <section class="view-pane active" id="view-overview">
         <div class="bento-grid">
-          <!-- Карточка 1: Школьное расписание -->
+          <!-- Карточка 1: График и слоты -->
           <div class="card school-only" id="ovLessonsCard">
             <div class="card-head">
-              <span class="card-title">Школьное расписание</span>
+              <span class="card-title">График и слоты</span>
               <div class="card-head-right">
                 <span class="card-meta" id="ovLessonsMeta"></span>
                 <button class="btn-link" onclick="switchView('lessons')">Вся неделя →</button>
@@ -2140,13 +2140,13 @@
         </div>
       </section>
 
-      <!-- ================= 2. ШКОЛЬНОЕ РАСПИСАНИЕ ================= -->
+      <!-- ================= 2. ГРАФИК И СЛОТЫ ================= -->
       <section class="view-pane school-only" id="view-lessons">
         <div class="day-tabs" id="scheduleDayTabs"></div>
 
         <div class="card card-mb">
           <div class="card-head">
-            <span class="card-title" id="scheduleDayTitle">Расписание</span>
+            <span class="card-title" id="scheduleDayTitle">График</span>
             <div class="card-head-right">
               <button class="btn btn-ghost" id="btnWeekMode" onclick="toggleWeekCycleMode()">1 неделя</button>
               <button class="btn btn-ghost" id="btnSwitchWeek" style="display:none;" onclick="flipCurrentWeek()">Сменить неделю</button>
@@ -2157,30 +2157,30 @@
 
         <div class="filter-bar">
           <div class="pill-group">
-            <button class="btn btn-primary" onclick="togglePanel('panelAddLesson', 'panelBulkLesson')">+ Добавить урок</button>
+            <button class="btn btn-primary" onclick="togglePanel('panelAddLesson', 'panelBulkLesson')">+ Добавить слот</button>
             <button class="btn" onclick="togglePanel('panelBulkLesson', 'panelAddLesson')">Загрузить списком</button>
           </div>
         </div>
 
         <div class="form-box collapsible-panel" id="panelAddLesson">
           <form class="form-grid" onsubmit="handleAddLesson(event)">
-            <div class="card-title">Новый урок</div>
+            <div class="card-title">Новый тайм-слот / встреча</div>
             <div class="form-row">
-              <input type="time" id="lesStart" class="input" value="08:30" required />
+              <input type="time" id="lesStart" class="input" value="09:00" required />
               <input type="time" id="lesEnd" class="input" />
               <select id="lesWeekType" class="input">
                 <option value="0">Каждую неделю</option>
-                <option value="1">Верхняя неделя (1)</option>
-                <option value="2">Нижняя неделя (2)</option>
+                <option value="1">Неделя 1</option>
+                <option value="2">Неделя 2</option>
               </select>
             </div>
             <div class="form-row">
-              <input type="text" id="lesSubject" class="input" placeholder="Предмет (например, Алгебра)" required />
-              <input type="text" id="lesRoom" class="input" placeholder="Кабинет или заметка" />
+              <input type="text" id="lesSubject" class="input" placeholder="Событие или блок (например: Созвон, Тренировка, Фокус)" required />
+              <input type="text" id="lesRoom" class="input" placeholder="Место или заметка" />
             </div>
             <div class="form-row">
-              <input type="url" id="lesUrl" class="input" placeholder="Ссылка на онлайн-урок (Zoom / Meet)" />
-              <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Сохранить урок</button>
+              <input type="url" id="lesUrl" class="input" placeholder="Ссылка на встречу (Zoom / Meet / Telegram)" />
+              <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Сохранить слот</button>
             </div>
           </form>
         </div>
@@ -2188,12 +2188,12 @@
         <div class="form-box collapsible-panel" id="panelBulkLesson">
           <form class="form-grid" onsubmit="handleBulkSchedule(event)">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span class="card-title">Загрузить расписание списком</span>
+              <span class="card-title">Загрузить график списком</span>
               <label style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
-                <input type="checkbox" id="bulkReplaceAll" /> Заменить текущее
+                <input type="checkbox" id="bulkReplaceAll" /> Заменить текущий
               </label>
             </div>
-            <textarea id="bulkScheduleText" class="input" placeholder="Понедельник&#10;08:30 Алгебра каб. 204&#10;09:25 Физика"></textarea>
+            <textarea id="bulkScheduleText" class="input" placeholder="Понедельник&#10;10:00 Планерка с командой&#10;14:00 Фокус-блок по проекту"></textarea>
             <button type="submit" class="btn btn-primary" style="align-self:flex-start;">Разобрать и сохранить</button>
           </form>
         </div>
@@ -2232,7 +2232,7 @@
               <input type="text" id="goalTitle" class="input" style="flex:2 1 240px;" placeholder="Глобальная задача или цель без привязки ко дню..." required />
               <select id="goalCategory" class="input" style="flex:0 1 140px;">
                 <option value="">Без сферы</option>
-                <option value="Учёба">Учёба</option>
+                <option value="Работа">Работа</option>
                 <option value="Проекты">Проекты</option>
                 <option value="Личное">Личное</option>
               </select>
@@ -2248,7 +2248,7 @@
           <div class="pill-group" id="goalFiltersBar">
             <button class="seg-pill active" data-gf="all" onclick="setGoalFilter('all')">Все</button>
             <button class="seg-pill" data-gf="priority" onclick="setGoalFilter('priority')">Важные ★</button>
-            <button class="seg-pill" data-gf="Учёба" onclick="setGoalFilter('Учёба')">Учёба</button>
+            <button class="seg-pill" data-gf="Работа" onclick="setGoalFilter('Работа')">Работа</button>
             <button class="seg-pill" data-gf="Проекты" onclick="setGoalFilter('Проекты')">Проекты</button>
             <button class="seg-pill" data-gf="Личное" onclick="setGoalFilter('Личное')">Личное</button>
             <button class="seg-pill" data-gf="done" onclick="setGoalFilter('done')">Готовые</button>
@@ -2361,7 +2361,7 @@
         <span class="ico">◉</span><span>Обзор</span>
       </button>
       <button class="mob-nav-btn school-only" data-view="lessons" onclick="switchView('lessons')">
-        <span class="ico">◷</span><span>Уроки</span>
+        <span class="ico">◷</span><span>График</span>
       </button>
       <button class="mob-nav-btn" data-view="daily" onclick="switchView('daily')">
         <span class="ico">✓</span><span>Задания</span>
@@ -2545,20 +2545,20 @@
         <div class="tweak-bar">
           <div>
             <span class="tweak-label">Готовый профиль под ваш ритм жизни</span>
-            <span class="tweak-sub">Переключает названия разделов (например, заменяет «Школу» на «Рабочий график») и базовый набор категорий. Все ваши записи сохраняются.</span>
+            <span class="tweak-sub">Переключает названия разделов, раскладку карточек и базовый набор категорий. Все ваши записи сохраняются.</span>
           </div>
           <div class="profile-preset-grid" id="profilePresetsGrid">
             <button type="button" class="profile-preset-card" data-preset="study" onclick="applyProfilePreset('study')">
-              <span class="profile-preset-title">🎓 Учёба</span>
-              <span class="profile-preset-sub">Школа или универ: расписание уроков/пар, домашка, проекты, привычки и книги</span>
+              <span class="profile-preset-title">🚀 Поток и развитие</span>
+              <span class="profile-preset-sub">График встреч и блоков, задачи на день, проекты, привычки и книги</span>
             </button>
             <button type="button" class="profile-preset-card" data-preset="work" onclick="applyProfilePreset('work')">
               <span class="profile-preset-title">💼 Работа и проекты</span>
-              <span class="profile-preset-sub">Рабочий график и созвоны вместо школы, задачи по дням, проекты, клиенты и привычки</span>
+              <span class="profile-preset-sub">Рабочий график и созвоны, задачи по дням, проекты, клиенты и привычки</span>
             </button>
             <button type="button" class="profile-preset-card" data-preset="custom" onclick="applyProfilePreset('custom')">
               <span class="profile-preset-title">⚡ Свободный режим</span>
-              <span class="profile-preset-sub">Без расписания уроков: только дневные задачи, общие цели, привычки и книги</span>
+              <span class="profile-preset-sub">Без почасового графика: только дневные задачи, общие цели, привычки и книги</span>
             </button>
           </div>
         </div>
@@ -2578,7 +2578,7 @@
         <div class="tweak-bar">
           <div>
             <span class="tweak-label">Настройка разделов приложения</span>
-            <span class="tweak-sub">Любой раздел можно переименовать под себя (например: «Школьное расписание» → «Смены», «Книги» → «Фильмы и игры») или скрыть</span>
+            <span class="tweak-sub">Любой раздел можно переименовать под себя (например: «График и слоты» → «Созвоны», «Книги» → «Фильмы и игры») или скрыть</span>
           </div>
           <div id="sectionsConfigList"></div>
           <div style="display:flex; justify-content:flex-end;">
@@ -2592,8 +2592,8 @@
         <div class="tweak-bar">
           <div class="tweak-row school-only">
             <div>
-              <span class="tweak-label">Пауза на школьные уроки</span>
-              <span class="tweak-sub">Каникулы или болезнь — отключает только звонки об уроках</span>
+              <span class="tweak-label">Пауза на график и слоты</span>
+              <span class="tweak-sub">Отпуск или выходной — отключает только напоминания по почасовому графику</span>
             </div>
             <button class="btn" id="stPauseLessonsBtn" onclick="toggleSetting('pause_lessons')">Выкл</button>
           </div>
@@ -2637,7 +2637,7 @@
         <div class="tweak-bar">
           <div class="tweak-row school-only">
             <div>
-              <span class="tweak-label">Напоминать до начала урока</span>
+              <span class="tweak-label">Напоминать до начала события</span>
             </div>
             <div class="pill-group" id="stLeadMinPills">
               <button class="seg-pill" data-min="1" onclick="quickSaveSetting('lesson_lead_minutes', '1')">1 мин</button>
@@ -2651,7 +2651,7 @@
 
           <div class="tweak-row school-only">
             <div>
-              <span class="tweak-label">Цикл расписания</span>
+              <span class="tweak-label">Цикл графика</span>
             </div>
             <div class="pill-group" id="stWeekModePills">
               <button class="seg-pill" data-wm="1" onclick="quickSaveSetting('week_cycle_mode', '1')">1 неделя</button>
@@ -2660,7 +2660,7 @@
           </div>
 
           <div class="tweak-row school-only">
-            <div><span class="tweak-label">Утренняя сводка до урока</span></div>
+            <div><span class="tweak-label">Утренняя сводка до первого слота</span></div>
             <div class="pill-group" id="stMorningOffsetPills">
               <button class="seg-pill" data-mo="15" onclick="quickSaveSetting('morning_digest_offset_min', '15')">15 мин</button>
               <button class="seg-pill" data-mo="30" onclick="quickSaveSetting('morning_digest_offset_min', '30')">30 мин</button>
@@ -2907,12 +2907,12 @@
         colors: { bg: '#f5f4f8', surface: '#ffffff', text: '#15141b', textMuted: '#666375', pink: '#e11d74', amber: '#f59e0b' },
         quotes: [
           'Не откладывай на завтра то, что можно закрыть сейчас и потом спокойно открыть книгу.',
-          'Я маякну за 2 минуты до урока. Остальное держи в заданиях, а не в голове.',
+          'Я маякну за 2 минуты до начала встречи. Остальное держи в заданиях, а не в голове.',
           'Вчерашние дела сами себя не закроют — нажми «На сегодня» или добей сразу.',
-          'Дисциплина в чёрно-розовом стиле: уроки на месте, общие планы под прицелом.',
+          'Дисциплина в чёрно-розовом стиле: график на месте, общие планы под прицелом.',
           'Полка книг сама себя не пополнит. Что сейчас в планах на чтение?',
           'Одна галочка в привычках за сегодня — и серия уже не смотрит на тебя укоризненно.',
-          'Если хочется тишины и сбежать от звонков, просто включи паузу в настройках.',
+          'Если хочется тишины и отдыха, просто включи паузу в настройках.',
         ],
       },
       {
@@ -2926,12 +2926,12 @@
         colors: { bg: '#110a0f', surface: '#1b1118', text: '#fdf2f7', textMuted: '#b89aa9', pink: '#ff2e63', amber: '#f8fafc' },
         quotes: [
           'Давай без лишней суеты: закрываем дневные задания, и я официально разрешаю отдыхать.',
-          'До урока остаётся две минуты — я маякну. Не засыпай раньше времени.',
+          'До следующей встречи остаётся две минуты — я маякну. Не засыпай раньше времени.',
           'Если в общих планах висит что-то огромное, просто откуси от него одно задание на день.',
           'Сон и отдых — тоже нормальный план. Хватает одной привычки и пары страниц книги.',
-          'Никакой лишней возни: уроки разложены, осталось только вовремя дойти.',
-          'Каникулы или заболел? Жми паузу — пусть будильники помолчат, а серия не сгорит.',
-          'Полка книг ждёт, пока все пары кончатся. Давай закроем день пораньше.',
+          'Никакой лишней возни: график разложен, осталось только вовремя включиться.',
+          'Выходной или отпуск? Жми паузу — пусть уведомления помолчат, а серия не сгорит.',
+          'Полка книг ждёт, пока все дела кончатся. Давай закроем день пораньше.',
         ],
       },
       {
@@ -2945,9 +2945,9 @@
         colors: { bg: '#0c0914', surface: '#161124', text: '#f8f5ff', textMuted: '#a39bb8', pink: '#e11d48', amber: '#06b6d4' },
         quotes: [
           'Ставка дня: успеешь ли ты закрыть все дневные задания до вечера? ♠',
-          'Никакого блефа — всё расписание, привычки и общие планы на твоём столе.',
+          'Никакого блефа — весь график, привычки и общие планы на твоём столе.',
           'Прошлые дела больше не сгорают в полночь, но риск копить хвосты всегда щекочет нервы!',
-          'За 2 минуты до урока карты уже сданы — заходи без опозданий.',
+          'За 2 минуты до старта слота карты уже сданы — заходи без опозданий.',
           'Выбирай цель из общих планов покрупнее — маленькие ставки слишком скучны.',
           'Серия привычек — это твоя победная полоса. Не прерывай её по пустякам ♥',
           'В библиотеке новая книга? Поспорим, на сколько ночей она тебя затянет.',
@@ -2965,10 +2965,10 @@
         quotes: [
           'Тишина, порядок и ясная мысль. У каждого дела и книги — своё место на свитке.',
           'Даже крупная цель из общих планов покоряется одному спокойному заданию в день.',
-          'Сигнал перед уроком прозвучит ровно вовремя. Никакой суеты.',
+          'Сигнал перед встречей прозвучит ровно вовремя. Никакой суеты.',
           'Отмеченная привычка — как ровный штрих тушью. Серия копится без шума.',
           'Прочитанная книга остаётся на полке тихим трофеем. Что откроешь следующим?',
-          'Когда нужен покой, пауза сохранит твою серию и выключит лишние звонки.',
+          'Когда нужен покой, пауза сохранит твою серию и выключит лишние сигналы.',
           'Лишний шум убран — остались только твои шаги на сегодня.',
         ],
       },
@@ -2985,7 +2985,7 @@
           'Where is your motivation? Глобальные цели ждут действий, а не отговорок.',
           'Ямато отсекает всё лишнее. На экране только то, что ведёт вперёд.',
           'Прошлые задания ещё не закрыты. Либо заверши их сегодня, либо убери с пути.',
-          'Две минуты до урока. Слабость — позволять себе опаздывать.',
+          'Две минуты до старта по графику. Слабость — позволять себе опаздывать.',
           'Сила привычек куётся ежедневно. Ни один пропуск без причины не оправдан.',
           'Книги — это знание, а знание — сила. Отметь свой прогресс на полке.',
           'Бери важные цели из общих планов и руби их на чёткие дневные задачи.',
@@ -3001,10 +3001,10 @@
         cropPos: '72% 18%',
         colors: { bg: '#0a0f0c', surface: '#121c16', text: '#f0fdf4', textMuted: '#8da896', pink: '#84cc16', amber: '#f59e0b' },
         quotes: [
-          'Условия контракта просты: я слежу за расписанием, а ты не срываешь дневные планы.',
+          'Условия контракта просты: я слежу за графиком, а ты не срываешь дневные планы.',
           'Если устал — жми паузу. По условиям контракта серия привычек не пострадает.',
           'В общих планах уже накопилось дел на целую жизнь. Возьми хотя бы одно на сегодня.',
-          'За 2 минуты до урока я подам знак. Постарайся не прозевать, как пиццу в духовке.',
+          'За 2 минуты до события я подам знак. Постарайся не прозевать, как пиццу в духовке.',
           'Люди забывают обещания, но база книг и заданий помнит всё до строчки.',
           'Пара глав хорошей книги перед сном — неплохой способ переждать шумный день.',
           'Нам не нужны лишние кнопки, только чистый план и твёрдое решение.',
@@ -3020,9 +3020,9 @@
         cropPos: '76% 18%',
         colors: { bg: '#080e11', surface: '#101a20', text: '#ecfeff', textMuted: '#86a6b0', pink: '#2dd4bf', amber: '#e2e8f0' },
         quotes: [
-          'Тихая мелодия дня: уроки, задания и привычки идут строго в такт.',
+          'Тихая мелодия дня: график, задания и привычки идут строго в такт.',
           'Чёрные перья любят ночной покой. Отметь прочитанные страницы и выдохни.',
-          'Я шепну за 2 минуты до начала урока, чтобы ты подключился без спешки.',
+          'Я шепну за 2 минуты до начала встречи, чтобы ты подключился без спешки.',
           'Вчерашние задания никуда не исчезли — аккуратно перенеси нужные на сегодня.',
           'В базе привычек каждый отмеченный день складывается в ровный ритм.',
           'Выдели звёздочкой важные общие планы, чтобы не потерять главную ноту.',
@@ -3040,8 +3040,8 @@
         colors: { bg: '#110917', surface: '#1b1025', text: '#fdf4ff', textMuted: '#b095c2', pink: '#ec4899', amber: '#22d3ee' },
         quotes: [
           'Полный синхрон между компьютером и Telegram: кликнул тут — сразу обновилось там!',
-          'Ритм дня заряжен: расписание, дневные задания и трекер привычек на одном пульте.',
-          'За 2 минуты до урока выдам сигнал на экран. Готовься к старту!',
+          'Ритм дня заряжен: график, дневные задания и трекер привычек на одном пульте.',
+          'За 2 минуты до старта слота выдам сигнал на экран. Готовься к старту!',
           'Закидывай идеи в общие планы, пока трек не сменился — потом заберёшь в день.',
           'Серия привычек светится ярче неона. Не сбавляй темп!',
           'Даже в ритме мегаполиса есть час на книгу. Какую сейчас читаешь?',
@@ -3058,11 +3058,11 @@
         cropPos: '68% 18%',
         colors: { bg: '#fff7f9', surface: '#ffffff', text: '#382229', textMuted: '#8a6973', pink: '#e11d74', amber: '#f472b6' },
         quotes: [
-          'С возвращением! Всё расписание, задания и полка книг уже аккуратно разложены.',
-          'За 2 минуты до урока обязательно тебя позову — ничего не пропустишь!',
+          'С возвращением! Весь график, задания и полка книг уже аккуратно разложены.',
+          'За 2 минуты до встречи обязательно тебя позову — ничего не пропустишь!',
           'Не забывай пить воду и отмечать привычки, чтобы копилась красивая серия.',
           'Если вчера не успелось — не страшно! Перенесём задание на сегодня с новыми силами.',
-          'После всех уроков самое время заварить чай и открыть книгу из списка «Читаю».',
+          'После всех дел самое время заварить чай и открыть книгу из списка «Читаю».',
           'Отметь важные общие планы звёздочкой — так мы точно не забудем о главной цели.',
           'Ты молодец! Даже одно закрытое дело уже делает день лучше.',
         ],
@@ -3077,12 +3077,12 @@
         cropPos: '34% 20%',
         colors: { bg: '#140b14', surface: '#211221', text: '#fdf2f8', textMuted: '#b894b6', pink: '#f472b6', amber: '#c084fc' },
         quotes: [
-          'Уроки сами себя не посетят — жди мой сигнал ровно за 2 минуты до звонка.',
+          'Дела сами себя не закроют — жди мой сигнал ровно за 2 минуты до старта.',
           'Даже не думай бросать свои важные общие планы! Бери хотя бы один в работу.',
           'Хвосты с прошлых дней так и смотрят на тебя. Закрой или перенеси, я всё вижу.',
           'Хорошая книжка на ночь — награда только для тех, кто закрыл привычки дня.',
           'Неоново-розовый порядок: каждый список строго на своём месте, никакой каши.',
-          'Каникулы? Жми паузу — я присмотрю за твоей серией, пока ты отдыхаешь.',
+          'Нужна передышка? Жми паузу — я присмотрю за твоей серией, пока ты отдыхаешь.',
           'Записывай книги в полку сразу, чтобы не забыть, что хотел прочитать.',
         ],
       },
@@ -3097,10 +3097,10 @@
         colors: { bg: '#060609', surface: '#111118', text: '#f5f3ff', textMuted: '#938fa8', pink: '#ec4899', amber: '#a855f7' },
         quotes: [
           'Ночной режим включён: глаза отдыхают, пока ты разбираешь дела и планы.',
-          'Кошка гуляет сама по себе, а твои уроки и привычки — строго по расписанию.',
+          'Кошка гуляет сама по себе, а твой график и привычки — строго по часам.',
           'Самое уютное время — свернуться в тишине и дочитать пару глав текущей книги.',
           'Не переживай за вчерашние задания — они спокойно ждут тебя наверху списка.',
-          'За 2 минуты до начала урока мягко маякну на экран и в Telegram.',
+          'За 2 минуты до начала слота мягко маякну на экран и в Telegram.',
           'Серия привычек сама себя не удержит — тыкни хотя бы в одну за сегодня.',
           'Вся база синхронизирована: и с ночного ПК, и с телефона под одеялом.',
         ],
@@ -3115,11 +3115,11 @@
         cropPos: '50% 50%',
         colors: { bg: '#100912', surface: '#1a0f1e', text: '#fdf2fb', textMuted: '#b594b0', pink: '#f472b6', amber: '#e879f9' },
         quotes: [
-          'Все козыри на руках: уроки, дневные задания, общие планы, привычки и книги ♠ ♥',
+          'Все козыри на руках: график, дневные задания, общие планы, привычки и книги ♠ ♥',
           'Хороший расклад начинается с порядка. Расставь приоритеты ★ в общих планах.',
           'На сегодня стол чист или ещё остались карты в руке? Проверь блок заданий.',
           'Не оставляй прошлые дела в долгу — забирай их на сегодня и закрывай партию.',
-          'За 2 минуты до урока дам сигнал на вход. Не опаздывай к началу раунда.',
+          'За 2 минуты до старта слота дам сигнал на вход. Не опаздывай к началу раунда.',
           'Стабильная серия привычек — лучший джекпот на длинной дистанции ♦',
           'Новая книга в планах — новая партия на пару свободных вечеров.',
         ],
@@ -3134,9 +3134,9 @@
         cropPos: '72% 24%',
         colors: { bg: '#11120c', surface: '#1b1c12', text: '#fefce8', textMuted: '#a8a686', pink: '#ec4899', amber: '#22c55e' },
         quotes: [
-          'Ничего лишнего. Расписание на день, список целей и холодная голова.',
+          'Ничего лишнего. График на день, список целей и холодная голова.',
           'Просроченные задания не пропадают в полночь — они ждут, пока с ними разберутся.',
-          'За 2 минуты до урока будет сигнал. В седло и поехали.',
+          'За 2 минуты до события будет сигнал. В седло и поехали.',
           'Большие цели из общих планов берутся шаг за шагом. Забирай одну на сегодня.',
           'Хорошая книга после длинного дня стоит всех пережитых хлопот.',
           'Привычка держится только на слове, данном самому себе. Не срывай серию.',
@@ -3154,7 +3154,7 @@
         colors: { bg: '#0c0d0b', surface: '#151713', text: '#e6eadf', textMuted: '#8d9483', pink: '#a3b18a', amber: '#d97706' },
         quotes: [
           'Система в норме. Настольный узел и Telegram синхронизированы в реальном времени.',
-          'Сигнал урока откалиброван: уведомление приходит точно перед началом пары.',
+          'Сигнал таймера откалиброван: уведомление приходит точно перед началом слота.',
           'Буфер незакрытых задач сохранён — перенос на сегодня выполняется в 1 клик.',
           'Глобальные цели отсортированы по сферам. Приоритет ★ выведен на главный обзор.',
           'Модуль привычек за 14 дней собирает чистую телеметрию твоей серии.',
@@ -3174,7 +3174,7 @@
         quotes: [
           'Вокруг хватает хаоса, но хотя бы на твоём экране всё разложено чисто.',
           'Шутка в том, что вчерашние дела больше не сгорают в полночь. Придётся их закрыть.',
-          'Ровно за 2 минуты до урока придёт сигнал — в этом городе лучше не опаздывать.',
+          'Ровно за 2 минуты до встречи придёт сигнал — в этом городе лучше не опаздывать.',
           'Книга отвлекает от шума лучше любых новостей. Что сейчас на полке?',
           'Крупные общие планы не любят суеты, но один шаг стоит забрать в сегодняшний день.',
           'На этой чёрно-белой плёнке каждая отмеченная привычка — как редкий знак порядка.',
@@ -3191,12 +3191,12 @@
         cropPos: '50% 50%',
         colors: { bg: '#fafafa', surface: '#ffffff', text: '#111111', textMuted: '#6e6e6e', pink: '#111111', amber: '#111111' },
         quotes: [
-          'Чистый фокус: школьное расписание, дневные задания, общие планы, привычки и книги.',
+          'Чистый фокус: график дня, дневные задания, общие планы, привычки и книги.',
           'Начните с одного главного задания или перенесите шаг из общих планов на сегодня.',
           'Невыполненные прошлые задания ждут наверху списка, пока вы их не закроете.',
           'Все 5 баз работают синхронно между настольным приложением и Telegram.',
           'Отмечайте привычки каждый день, а книги переводите по статусам чтения.',
-          'Напоминания перед уроками можно в любой момент поставить на паузу.',
+          'Напоминания по графику можно в любой момент поставить на паузу.',
         ],
       },
     ];
@@ -3212,13 +3212,13 @@
       study: {
         id: 'study',
         sections: {
-          lessons: { enabled: true,  title: 'Школьное расписание', navTitle: 'Школьное расписание', mobTitle: 'Уроки' },
+          lessons: { enabled: true,  title: 'График и слоты',      navTitle: 'График и слоты',      mobTitle: 'График' },
           daily:   { enabled: true,  title: 'Дневные задания',     navTitle: 'Дневные задания',     mobTitle: 'Задания' },
           goals:   { enabled: true,  title: 'Общие планы',         navTitle: 'Общие планы',         mobTitle: 'Планы' },
           habits:  { enabled: true,  title: 'База привычек',       navTitle: 'База привычек',       mobTitle: 'Привычки' },
-          books:   { enabled: true,  title: 'Книги',               navTitle: 'Книги',               mobTitle: 'Книги' },
+          books:   { enabled: true,  title: 'Книги и материалы',   navTitle: 'Книги',               mobTitle: 'Книги' },
         },
-        categories: ['Учёба', 'Домашка', 'Проекты', 'Личное'],
+        categories: ['Проекты', 'Работа', 'Развитие', 'Личное'],
       },
       work: {
         id: 'work',
@@ -3284,7 +3284,7 @@
     const DAY_SHORT = { 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб', 7: 'Вс' };
     const VIEW_TITLES = {
       overview: 'Обзор дня',
-      lessons: 'Школьное расписание',
+      lessons: 'График и слоты',
       daily: 'Дневные задания',
       goals: 'Общие планы',
       habits: 'База привычек',
@@ -3376,9 +3376,9 @@
       const [acR, acG, acB] = hexToRgb(c.pink);
       const accentFg = getContrastFg(c.pink);
 
-      const scrimAlphas = { off: 1, soft: 0.80, mid: 0.64, bright: 0.34 };
+      const scrimAlphas = { off: 1, soft: 0.72, mid: 0.50, bright: 0.28 };
       const level = skin.img ? (UI_PREFS.watermarkLevel || 'mid') : 'off';
-      const scrimAlpha = scrimAlphas[level] ?? 0.64;
+      const scrimAlpha = scrimAlphas[level] ?? 0.50;
 
       const root = document.documentElement;
       root.style.setProperty('--bg', c.bg);
@@ -3397,7 +3397,7 @@
       root.style.setProperty('--accent-soft', `rgba(${acR}, ${acG}, ${acB}, 0.14)`);
       root.style.setProperty('--soft-shadow', effectiveMode === 'dark' ? '0 10px 30px rgba(0,0,0,0.36)' : '0 8px 26px rgba(20,20,30,0.06)');
 
-      const imgUrl = !skin.img ? '' : (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : `${skin.img}?v=hd5`;
+      const imgUrl = !skin.img ? '' : (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : `${skin.img}?v=hd6`;
       root.style.setProperty('--wallpaper-display', !imgUrl || level === 'off' ? 'none' : 'block');
       root.style.setProperty('--wallpaper-url', imgUrl ? `url('${imgUrl}')` : 'none');
       root.style.setProperty('--wallpaper-pos', skin.cropPos || '50% 18%');
@@ -3484,18 +3484,18 @@
       if (slot === 'morning') {
         if (skin.id === 'ellen-zzz') {
           return schoolOn
-            ? 'Доброе утро… ещё бы поспать, но сначала закроем уроки и задания дня.'
+            ? 'Доброе утро… ещё бы поспать, но сначала разберём график и задания дня.'
             : 'Доброе утро… ещё бы поспать, но сначала закроем задания дня.';
         }
         if (skin.id === 'vergil-yamato') return 'Утро началось. Собери волю и закрой первую задачу дня.';
         if (skin.id === 'terrorblade-sakura') {
           return schoolOn
-            ? 'Утро на свитке: без лишней суеты разбери уроки и задания дня.'
+            ? 'Утро на свитке: без лишней суеты разбери график и задания дня.'
             : 'Утро на свитке: без лишней суеты разбери задания дня.';
         }
         if (skin.id === 'chocola-maid') {
           return schoolOn
-            ? 'Доброе утро! Расписание на сегодня уже готово, хорошего тебе дня!'
+            ? 'Доброе утро! График на сегодня уже готов, хорошего тебе дня!'
             : 'Доброе утро! Список дел и привычек на сегодня уже готов, хорошего дня!';
         }
         return `Доброе утро! ${first}`;
@@ -4185,7 +4185,7 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       if (topBtn) topBtn.textContent = skin.name.split('·')[0].trim();
 
       if (skin.img) {
-        const src = (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : `${skin.img}?v=hd5`;
+        const src = (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : `${skin.img}?v=hd6`;
         if (poster) {
           const curImg = document.getElementById('heroArtImg');
           if (!curImg || curImg.getAttribute('data-skin') !== skin.id) {
@@ -4430,10 +4430,10 @@ function buildUniqueChibiInner(type, mood, skinObj) {
         const openDaily = (STATE.todayPlans || []).filter((p) => !p.is_done).length;
         const overdueCnt = (STATE.overduePlans || []).length;
         const parts = [];
-        if (schoolOn) parts.push(activeLessons ? `Уроков: ${activeLessons}` : 'Уроков нет');
+        if (schoolOn) parts.push(activeLessons ? `По графику: ${activeLessons}` : 'Свободный график');
         parts.push(openDaily ? `Заданий осталось: ${openDaily}` : 'Задания закрыты');
         if (overdueCnt) parts.push(`С прошлых дней: ${overdueCnt}`);
-        if (schoolOn && s.week_cycle_mode === '2') parts.push(STATE.weekType === 1 ? 'Верхняя нед.' : 'Нижняя нед.');
+        if (schoolOn && s.week_cycle_mode === '2') parts.push(STATE.weekType === 1 ? 'Неделя 1' : 'Неделя 2');
         subEl.textContent = parts.join(' · ');
       } else {
         titleEl.textContent = VIEW_TITLES[STATE.activeView] || dateStr;
@@ -4446,7 +4446,7 @@ function buildUniqueChibiInner(type, mood, skinObj) {
           pauseBtn.textContent = '× Полная тишина';
           pauseBtn.classList.add('paused');
         } else if (isSchoolOn() && s.pause_lessons === '1') {
-          pauseBtn.textContent = '◐ Пауза уроков';
+          pauseBtn.textContent = '◐ Пауза графика';
           pauseBtn.classList.add('paused');
         } else {
           pauseBtn.textContent = s.has_bot_token ? '● Бот на связи' : '● Активен';
@@ -4463,7 +4463,7 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       const habs = (STATE.todayHabits || []).filter((h) => h.scheduled_today);
       const doneHabs = habs.filter((h) => h.log_status === 'done').length;
 
-      document.getElementById('cntLessons').textContent = activeLessons ? `${activeLessons} ур.` : '—';
+      document.getElementById('cntLessons').textContent = activeLessons ? `${activeLessons} сл.` : '—';
       const cntDaily = document.getElementById('cntDaily');
       cntDaily.textContent = overdueCnt ? `${openDaily} (+${overdueCnt})` : String(openDaily);
       cntDaily.classList.toggle('alert', overdueCnt > 0);
@@ -4474,18 +4474,18 @@ function buildUniqueChibiInner(type, mood, skinObj) {
 
     // ================= 1. РЕНДЕР: ОБЗОР ДНЯ (BENTO) =================
     function renderOverview() {
-      // 1) Уроки сегодня
+      // 1) График сегодня
       const lessons = STATE.todayLessons || [];
       const activeLessons = lessons.filter((l) => !l.is_cancelled_today).length;
       document.getElementById('ovLessonsMeta').textContent =
         STATE.settings.pause_lessons === '1' || STATE.settings.pause_all === '1'
           ? 'На паузе'
           : activeLessons
-          ? `${activeLessons} ур.`
+          ? `${activeLessons} сл.`
           : '';
       const ovLessons = document.getElementById('ovLessonsList');
       if (lessons.length === 0) {
-        ovLessons.innerHTML = `<div class="empty-line">Сегодня уроков нет</div>`;
+        ovLessons.innerHTML = `<div class="empty-line">На сегодня слотов нет</div>`;
       } else {
         ovLessons.innerHTML = lessons
           .map((l) => {
@@ -4676,7 +4676,7 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       }
     }
 
-    // ================= 2. РЕНДЕР: ШКОЛЬНОЕ РАСПИСАНИЕ =================
+    // ================= 2. РЕНДЕР: ГРАФИК И СЛОТЫ =================
     function renderLessonsView() {
       const mode2 = STATE.settings.week_cycle_mode === '2';
       document.getElementById('btnWeekMode').textContent = mode2 ? '2 недели' : '1 неделя';
@@ -4693,18 +4693,18 @@ function buildUniqueChibiInner(type, mood, skinObj) {
         .join('');
 
       document.getElementById('scheduleDayTitle').textContent =
-        `${DAY_NAMES[STATE.selectedDayTab]}${mode2 ? (STATE.weekType === 1 ? ' · Верхняя нед.' : ' · Нижняя нед.') : ''}`;
+        `${DAY_NAMES[STATE.selectedDayTab]}${mode2 ? (STATE.weekType === 1 ? ' · Неделя 1' : ' · Неделя 2') : ''}`;
 
       const list = (STATE.allLessons || []).filter((l) => l.day_of_week === STATE.selectedDayTab);
       const box = document.getElementById('scheduleDayList');
       if (list.length === 0) {
-        box.innerHTML = `<div class="empty-line">${DAY_NAMES[STATE.selectedDayTab]}: уроков пока нет</div>`;
+        box.innerHTML = `<div class="empty-line">${DAY_NAMES[STATE.selectedDayTab]}: слотов пока нет</div>`;
         return;
       }
       box.innerHTML = list
         .map((l) => {
           const timeRange = l.end_time ? `${l.start_time}–${l.end_time}` : l.start_time;
-          const wt = l.week_type === 1 ? ' · Верхняя' : l.week_type === 2 ? ' · Нижняя' : '';
+          const wt = l.week_type === 1 ? ' · Нед. 1' : l.week_type === 2 ? ' · Нед. 2' : '';
           const room = l.room_or_note ? ` · ${escapeHtml(l.room_or_note)}` : '';
           const joinBtn = l.join_url
             ? `<a class="badge accent" style="text-decoration:none;" href="${escapeHtml(l.join_url)}" target="_blank">Войти →</a>`
@@ -5159,7 +5159,7 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       });
       document.getElementById('bulkScheduleText').value = '';
       document.getElementById('panelBulkLesson').classList.remove('open');
-      showToast(`● Добавлено уроков: ${res.count}`);
+      showToast(`● Добавлено в график: ${res.count}`);
       await loadState(true, false);
     }
 
@@ -5361,7 +5361,7 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       }
       grid.innerHTML = list
         .map((s) => {
-          const imgSrc = !s.img ? '' : (s.img.startsWith('data:') || s.img.startsWith('http')) ? s.img : `${s.img}?v=hd5`;
+          const imgSrc = !s.img ? '' : (s.img.startsWith('data:') || s.img.startsWith('http')) ? s.img : `${s.img}?v=hd6`;
           const thumb = imgSrc
             ? `<img src="${imgSrc}" alt="${escapeHtml(s.name)}" loading="lazy" decoding="async" style="object-position:${s.cropPos || '50% 20%'};" />`
             : `<span>Без арта</span>`;
@@ -5908,7 +5908,7 @@ function buildUniqueChibiInner(type, mood, skinObj) {
 
     function applyProfileToDom() {
       const secs = PROFILE_CONFIG.sections || PROFILE_PRESETS.study.sections;
-      const cats = PROFILE_CONFIG.categories || ['Учёба', 'Проекты', 'Личное'];
+      const cats = PROFILE_CONFIG.categories || ['Работа', 'Проекты', 'Личное'];
 
       // 1. Обновляем VIEW_TITLES, боковое меню, мобильное меню и заголовки карточек Обзора
       VIEW_TITLES.lessons = secs.lessons?.title || 'Расписание';
@@ -6015,11 +6015,11 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       const secListEl = document.getElementById('sectionsConfigList');
       if (secListEl) {
         const order = [
-          { key: 'lessons', hint: 'Сетка расписания по дням недели (уроки, пары, рабочие смены или созвоны)' },
+          { key: 'lessons', hint: 'Сетка почасового графика по дням недели (встречи, созвоны, тренировки или смены)' },
           { key: 'daily',   hint: 'Задачи с привязкой к дате и времени напоминания' },
           { key: 'goals',   hint: 'Долгосрочные цели и проекты по категориям' },
           { key: 'habits',  hint: 'Трекер привычек с таблицей прогресса за 14 дней' },
-          { key: 'books',   hint: 'Полка чтения, фильмов, курсов или игр со статусами' },
+          { key: 'books',   hint: 'Полка чтения, фильмов, материалов или игр со статусами' },
         ];
         secListEl.innerHTML = order
           .map(({ key, hint }) => {
@@ -6542,6 +6542,6 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       }
     });
   </script>
-  <script src="/js/v31-engine.js"></script>
+  <script src="/js/v31-engine.js?v=311"></script>
 </body>
 </html>

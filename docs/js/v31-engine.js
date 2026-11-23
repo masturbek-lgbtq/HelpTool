@@ -9,25 +9,29 @@
   'use strict';
 
   const LS_LAYOUT_KEY = 'helptool_v31_layout_cfg';
+  const LS_SEEN_RELEASE_KEY = 'helptool_seen_release_ver';
+  const CURRENT_RELEASE_VERSION = '3.1.1';
+  const CURRENT_RELEASE_TITLE = 'Обновление 3.1.1 установлено';
+  const CURRENT_RELEASE_NOTES = 'HD-ремастер новых тем (1600p) · Полностью обновлён словарь разделов и ролей · Автоматические уведомления о новых версиях · Перемещение плашек (⋮⋮) и 6 ролей';
 
   // 6 глубоких ролей с приоритетами плашек, шириной и названиями разделов
   const V31_ROLES = {
     study: {
       id: 'study',
-      icon: '🎓',
-      title: 'Школа и Вуз',
-      sub: 'Расписание уроков/пар, домашка, учебные проекты, привычки и книги',
-      quickHint: 'Например: «завтра 14:00 сдать лабу», «общий план: курсовая», «книга Мастер и Маргарита»',
+      icon: '🚀',
+      title: 'Поток и развитие',
+      sub: 'Почасовой график блоков и встреч, задачи на день, проекты, привычки и книги',
+      quickHint: 'Например: «завтра 14:00 созвон по проекту», «общий план: портфолио», «книга Мастер и Маргарита»',
       cardOrder: ['lessons', 'daily', 'goals', 'habits', 'books'],
       cardSpans: { books: 2 },
       sections: {
-        lessons: { enabled: true,  title: 'Школьное расписание', navTitle: 'Школьное расписание', mobTitle: 'Уроки' },
-        daily:   { enabled: true,  title: 'Дневные задания',     navTitle: 'Дневные задания',     mobTitle: 'Задания' },
-        goals:   { enabled: true,  title: 'Общие планы',         navTitle: 'Общие планы',         mobTitle: 'Планы' },
-        habits:  { enabled: true,  title: 'База привычек',       navTitle: 'База привычек',       mobTitle: 'Привычки' },
-        books:   { enabled: true,  title: 'Книги и учебники',    navTitle: 'Книги',               mobTitle: 'Книги' },
+        lessons: { enabled: true,  title: 'График и слоты',    navTitle: 'График и слоты',    mobTitle: 'График' },
+        daily:   { enabled: true,  title: 'Дневные задания',   navTitle: 'Дневные задания',   mobTitle: 'Задания' },
+        goals:   { enabled: true,  title: 'Общие планы',       navTitle: 'Общие планы',       mobTitle: 'Планы' },
+        habits:  { enabled: true,  title: 'База привычек',     navTitle: 'База привычек',     mobTitle: 'Привычки' },
+        books:   { enabled: true,  title: 'Книги и материалы', navTitle: 'Книги',             mobTitle: 'Книги' },
       },
-      categories: ['Учёба', 'Домашка', 'Экзамены', 'Проекты', 'Личное'],
+      categories: ['Проекты', 'Работа', 'Развитие', 'Личное'],
     },
     work: {
       id: 'work',
@@ -84,7 +88,7 @@
       id: 'life',
       icon: '🏠',
       title: 'Личная жизнь и дом',
-      sub: 'Без школьных уроков: домашние дела, покупки, финансы, фильмы и книги',
+      sub: 'Без почасового графика: домашние дела, покупки, финансы, фильмы и книги',
       quickHint: 'Например: «в 19:00 купить кофе и продукты», «общий план: отпуск», «книга Дюна»',
       cardOrder: ['daily', 'goals', 'habits', 'books', 'lessons'],
       cardSpans: {},
@@ -421,6 +425,7 @@
   }
 
   function setupCardDragHandle(card, handle, key) {
+    // Pointer-based живое перетаскивание (работает и мышкой на ПК, и пальцем на iPhone)
     handle.addEventListener('pointerdown', (e) => {
       if (LAYOUT_CFG.layoutLocked) return;
       if (e.button !== undefined && e.button !== 0) return;
@@ -722,8 +727,10 @@
     const paneProfile = document.getElementById('studioPaneProfile');
     if (!paneProfile) return;
 
+    // 1. Обновляем сетку ролей (6 встроенных + пользовательские)
     renderRolesGridInStudio();
 
+    // 2. Форма «Сохранить текущую настройку как свою роль»
     const presetsGrid = document.getElementById('profilePresetsGrid');
     if (presetsGrid && !document.getElementById('customRoleCreatorRow')) {
       const creatorRow = document.createElement('form');
@@ -731,7 +738,7 @@
       creatorRow.id = 'customRoleCreatorRow';
       creatorRow.style.marginTop = '8px';
       creatorRow.innerHTML = `
-        <input type="text" id="newCustomRoleTitle" class="input" placeholder="Название своей роли (например: Дизайн-студия, Сессия)..." style="flex:2 1 190px;" />
+        <input type="text" id="newCustomRoleTitle" class="input" placeholder="Название своей роли (например: Дизайн-студия, Запуск)..." style="flex:2 1 190px;" />
         <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">★ Сохранить как свою роль</button>
       `;
       creatorRow.addEventListener('submit', async (e) => {
@@ -741,6 +748,7 @@
       presetsGrid.parentNode.appendChild(creatorRow);
     }
 
+    // 3. Конструктор макета и каркаса (Боковая панель, шапка, замок плашек, сброс сетки)
     if (!document.getElementById('v31LayoutBuilderBar')) {
       const bar = document.createElement('div');
       bar.className = 'tweak-bar';
@@ -866,6 +874,7 @@
     if (!role) return;
 
     const nextProfile = JSON.parse(JSON.stringify(role));
+    // На iPhone раздел lessons отсутствует, поэтому храним конфиг совместимо
     bridge.setProfileConfig(nextProfile);
 
     if (Array.isArray(role.cardOrder) && role.cardOrder.length) {
@@ -948,6 +957,7 @@
 
   // ===== 6. ЗАЩИТА ДАННЫХ И РЕЗЕРВНЫЕ КОПИИ НА ПК =====
   function ensurePcSecurityAndBackupBlock() {
+    // На iPhone этот блок уже есть в верстке (#stPinToggleBtn / #btnExportBackup)
     if (document.getElementById('stPinToggleBtn') || document.getElementById('v31PcSecurityBar')) return;
     const settingsPane = document.getElementById('studioPaneSettings');
     if (!settingsPane) return;
@@ -959,7 +969,7 @@
       <div class="tweak-row">
         <div>
           <span class="tweak-label">Режим приватности (👁 / Alt+P)</span>
-          <span class="tweak-sub">Мгновенно размывает тексты задач, уроков и книг на экране</span>
+          <span class="tweak-sub">Мгновенно размывает тексты задач, графика и книг на экране</span>
         </div>
         <button type="button" class="btn" id="stPcPrivacyBtn">Выкл</button>
       </div>
@@ -1141,6 +1151,7 @@
       setTimeout(() => card.classList.remove('card-sheen-active'), 580);
     }, { passive: true });
 
+    // Горячая клавиша Alt+P для мгновенного включения/выключения режима приватности
     document.addEventListener('keydown', (e) => {
       if (e.altKey && (e.code === 'KeyP' || e.key === 'p' || e.key === 'P' || e.key === 'з' || e.key === 'З')) {
         e.preventDefault();
@@ -1169,15 +1180,379 @@
     }
   }
 
-  // ===== 8. ИНИЦИАЛИЗАЦИЯ И ПЕРЕХВАТ РЕНДЕРА =====
+  // ===== 7.5. АВТООЧИСТКА СТАРЫХ УЧЕБНЫХ НАЗВАНИЙ ИЗ КЭША И ПРОФИЛЕЙ =====
+  function sanitizeLegacyTermsInRole(role) {
+    if (!role || typeof role !== 'object') return false;
+    let changed = false;
+
+    if (typeof role.title === 'string' && /школ|вуз|учёб|учеб|домашк/i.test(role.title)) {
+      role.title = 'Поток и развитие';
+      changed = true;
+    }
+    if (role.icon === '🎓') {
+      role.icon = '🚀';
+      changed = true;
+    }
+    if (typeof role.sub === 'string' && /школ|домашк|урок|учебн|пар,/i.test(role.sub)) {
+      role.sub = 'Почасовой график блоков и встреч, задачи на день, проекты, привычки и книги';
+      changed = true;
+    }
+    if (typeof role.quickHint === 'string' && /лабу|курсов|домашк|школ|урок/i.test(role.quickHint)) {
+      role.quickHint = 'Например: «завтра 14:00 созвон по проекту», «общий план: портфолио», «книга Мастер и Маргарита»';
+      changed = true;
+    }
+
+    if (role.sections && typeof role.sections === 'object') {
+      const ls = role.sections.lessons;
+      if (ls && typeof ls === 'object') {
+        if (typeof ls.title === 'string' && /школ|урок/i.test(ls.title)) {
+          ls.title = 'График и слоты';
+          changed = true;
+        }
+        if (typeof ls.navTitle === 'string' && /школ|урок/i.test(ls.navTitle)) {
+          ls.navTitle = 'График и слоты';
+          changed = true;
+        }
+        if (typeof ls.mobTitle === 'string' && /школ|урок/i.test(ls.mobTitle)) {
+          ls.mobTitle = 'График';
+          changed = true;
+        }
+      }
+      const bk = role.sections.books;
+      if (bk && typeof bk === 'object') {
+        if (typeof bk.title === 'string' && /учебник/i.test(bk.title)) {
+          bk.title = 'Книги и материалы';
+          changed = true;
+        }
+      }
+    }
+
+    if (Array.isArray(role.categories)) {
+      const nextCats = [];
+      let catChanged = false;
+      for (const rawCat of role.categories) {
+        let c = String(rawCat || '').trim();
+        if (!c) continue;
+        if (/^учёба$|^учеба$|^школа$/i.test(c)) {
+          c = 'Развитие';
+          catChanged = true;
+        } else if (/^домашка$|^домашнее/i.test(c)) {
+          c = 'Работа';
+          catChanged = true;
+        } else if (/^экзамены$/i.test(c)) {
+          c = 'Проекты';
+          catChanged = true;
+        }
+        if (!nextCats.includes(c)) nextCats.push(c);
+      }
+      if (catChanged) {
+        role.categories = nextCats.length ? nextCats : ['Проекты', 'Работа', 'Развитие', 'Личное'];
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  let legacySanitizeInFlight = false;
+  function sanitizeActiveProfileIfNeeded() {
+    if (legacySanitizeInFlight) return;
+    const bridge = getBridge();
+    const cur = bridge.getProfileConfig();
+    let dirty = false;
+
+    if (cur && sanitizeLegacyTermsInRole(cur)) {
+      dirty = true;
+      bridge.setProfileConfig(cur);
+    }
+
+    let customDirty = false;
+    for (const cr of LAYOUT_CFG.customRoles || []) {
+      if (sanitizeLegacyTermsInRole(cr)) customDirty = true;
+    }
+
+    if (customDirty) {
+      persistLayoutConfig();
+    }
+
+    if (dirty) {
+      legacySanitizeInFlight = true;
+      try {
+        if (typeof global.applyProfileToUi === 'function') {
+          global.applyProfileToUi();
+        }
+        Promise.resolve(bridge.persistProfileConfig()).finally(() => {
+          legacySanitizeInFlight = false;
+        });
+      } catch {
+        legacySanitizeInFlight = false;
+      }
+    }
+  }
+
+  // ===== 8. АВТОМАТИЧЕСКИЕ УВЕДОМЛЕНИЯ ОБ ОБНОВЛЕНИЯХ ВНУТРИ ПРИЛОЖЕНИЯ =====
+  let pendingRemoteUpdate = null;
+  let updateBannerDismissedSession = false;
+  let updateCheckTimer = null;
+  let lastRemoteCheckAt = 0;
+  let notifiedRemoteKey = '';
+
+  function setUpdateButtonsBadge(active) {
+    document.getElementById('btnAppUpdate')?.classList.toggle('has-update-badge', Boolean(active));
+    document.getElementById('btnMobAppUpdate')?.classList.toggle('has-update-badge', Boolean(active));
+  }
+
+  function ensureUpdateBannerEl() {
+    let banner = document.getElementById('v31UpdateBanner');
+    if (banner) return banner;
+
+    const workspace = document.querySelector('main.workspace');
+    if (!workspace) return null;
+
+    banner = document.createElement('section');
+    banner.id = 'v31UpdateBanner';
+    banner.className = 'v31-update-banner';
+    banner.setAttribute('aria-live', 'polite');
+
+    const topbar = workspace.querySelector('.topbar');
+    if (topbar && topbar.nextSibling) {
+      workspace.insertBefore(banner, topbar.nextSibling);
+    } else {
+      workspace.insertBefore(banner, workspace.firstChild);
+    }
+    return banner;
+  }
+
+  function renderUpdateBanner(forceReleaseBanner = false) {
+    const banner = ensureUpdateBannerEl();
+    if (!banner) return;
+
+    let seenRelease = '';
+    try {
+      seenRelease = localStorage.getItem(LS_SEEN_RELEASE_KEY) || '';
+    } catch {}
+
+    const hasRemote = Boolean(pendingRemoteUpdate);
+    const hasUnseenRelease = forceReleaseBanner || seenRelease !== CURRENT_RELEASE_VERSION;
+
+    // Индикатор-точка на кнопке ↻ горит, пока есть новое обновление или непрочитанные заметки версии
+    setUpdateButtonsBadge(hasRemote || seenRelease !== CURRENT_RELEASE_VERSION);
+
+    if (hasRemote && !updateBannerDismissedSession) {
+      const msg = pendingRemoteUpdate.latestMsg
+        ? `Что нового: ${pendingRemoteUpdate.latestMsg}`
+        : 'Нажмите «Обновить сейчас», чтобы сохранить резервную копию базы и установить свежую версию.';
+      banner.innerHTML = `
+        <div class="v31-update-info">
+          <div class="v31-update-title">
+            <span class="v31-update-badge-pill">✦ Новое обновление</span>
+            <span>Доступна свежая версия приложения</span>
+          </div>
+          <div class="v31-update-sub">${escapeStr(msg)}</div>
+        </div>
+        <div class="v31-update-actions">
+          <button type="button" class="btn btn-primary" id="v31BtnApplyNow">Обновить сейчас</button>
+          <button type="button" class="btn btn-ghost" id="v31BtnLater">Позже</button>
+        </div>
+      `;
+      banner.classList.add('show');
+
+      banner.querySelector('#v31BtnApplyNow')?.addEventListener('click', () => {
+        if (pendingRemoteUpdate && pendingRemoteUpdate.mode === 'sw') {
+          if (pendingRemoteUpdate.worker) {
+            pendingRemoteUpdate.worker.postMessage({ type: 'SKIP_WAITING' });
+          }
+          setTimeout(() => location.reload(), 250);
+          return;
+        }
+        if (typeof global.confirmApplyUpdate === 'function') {
+          global.confirmApplyUpdate();
+        } else {
+          document.getElementById('btnAppUpdate')?.click();
+        }
+      });
+
+      banner.querySelector('#v31BtnLater')?.addEventListener('click', () => {
+        updateBannerDismissedSession = true;
+        banner.classList.remove('show');
+      });
+      return;
+    }
+
+    if (hasUnseenRelease) {
+      banner.innerHTML = `
+        <div class="v31-update-info">
+          <div class="v31-update-title">
+            <span class="v31-update-badge-pill">✦ v${escapeStr(CURRENT_RELEASE_VERSION)}</span>
+            <span>${escapeStr(CURRENT_RELEASE_TITLE)}</span>
+          </div>
+          <div class="v31-update-sub">${escapeStr(CURRENT_RELEASE_NOTES)}</div>
+        </div>
+        <div class="v31-update-actions">
+          <button type="button" class="btn btn-primary" id="v31BtnAckRelease">Отлично, понятно ✓</button>
+        </div>
+      `;
+      banner.classList.add('show');
+
+      banner.querySelector('#v31BtnAckRelease')?.addEventListener('click', () => {
+        try {
+          localStorage.setItem(LS_SEEN_RELEASE_KEY, CURRENT_RELEASE_VERSION);
+        } catch {}
+        banner.classList.remove('show');
+        setUpdateButtonsBadge(Boolean(pendingRemoteUpdate));
+        getBridge().playSound('done');
+      });
+      return;
+    }
+
+    banner.classList.remove('show');
+  }
+
+  async function checkForRemoteUpdateSilently(manualFeedback = false) {
+    const bridge = getBridge();
+    lastRemoteCheckAt = Date.now();
+
+    // 1. Локальное настольное приложение Windows
+    if (bridge.isDesktopApp && (location.hostname === '127.0.0.1' || location.hostname === 'localhost')) {
+      if (typeof global.api !== 'function') return;
+      try {
+        const res = await global.api('/api/update/check', {});
+        if (res && res.hasUpdate) {
+          const key = `${res.remoteSha || res.remoteHash || res.latestMsg || 'upd'}`;
+          pendingRemoteUpdate = res;
+          if (notifiedRemoteKey !== key) {
+            notifiedRemoteKey = key;
+            updateBannerDismissedSession = false;
+            bridge.playSound('pop');
+          }
+          renderUpdateBanner(false);
+          return;
+        }
+        pendingRemoteUpdate = null;
+        renderUpdateBanner(false);
+        if (manualFeedback) {
+          bridge.toastMain(`● Установлена актуальная версия v${CURRENT_RELEASE_VERSION}`);
+        }
+      } catch {}
+      return;
+    }
+
+    // 2. Автономная версия на iPhone (Service Worker)
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) return;
+        await reg.update();
+        if (reg.waiting) {
+          pendingRemoteUpdate = {
+            mode: 'sw',
+            worker: reg.waiting,
+            latestMsg: 'Свежая версия загружена в фоне — нажмите, чтобы применить прямо сейчас',
+          };
+          updateBannerDismissedSession = false;
+          renderUpdateBanner(false);
+          return;
+        }
+        if (manualFeedback) {
+          bridge.toastMain(`● Установлена актуальная версия v${CURRENT_RELEASE_VERSION}`);
+        }
+      } catch {}
+    }
+  }
+
+  function ensureUpdateSettingsRow() {
+    const settingsPane = document.getElementById('studioPaneSettings');
+    if (!settingsPane || document.getElementById('v31UpdateStatusBar')) return;
+
+    const bar = document.createElement('div');
+    bar.className = 'tweak-bar';
+    bar.id = 'v31UpdateStatusBar';
+    bar.innerHTML = `
+      <div class="tweak-row">
+        <div>
+          <span class="tweak-label">Версия и уведомления об обновлениях (v${escapeStr(CURRENT_RELEASE_VERSION)})</span>
+          <span class="tweak-sub">Приложение само проверяет свежие патчи при запуске и в фоне — баннер появится сверху автоматически</span>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="v31CheckUpdateNowBtn">↻ Проверить сейчас</button>
+          <button type="button" class="btn" id="v31ShowWhatsNewBtn">✦ Что нового</button>
+        </div>
+      </div>
+    `;
+    settingsPane.appendChild(bar);
+
+    bar.querySelector('#v31CheckUpdateNowBtn')?.addEventListener('click', async () => {
+      document.getElementById('studioModal')?.classList.remove('open');
+      if (typeof global.handleUpdateClick === 'function') {
+        global.handleUpdateClick();
+      } else {
+        await checkForRemoteUpdateSilently(true);
+      }
+    });
+
+    bar.querySelector('#v31ShowWhatsNewBtn')?.addEventListener('click', () => {
+      document.getElementById('studioModal')?.classList.remove('open');
+      renderUpdateBanner(true);
+      getBridge().playSound('pop');
+    });
+  }
+
+  function initUpdateNotificationSystem() {
+    renderUpdateBanner(false);
+    ensureUpdateSettingsRow();
+
+    // Первая тихая фоновая проверка через 2.5 секунды после запуска
+    setTimeout(() => {
+      if (!document.hidden) checkForRemoteUpdateSilently(false);
+    }, 2500);
+
+    // Периодическая проверка раз в 20 минут, только пока окно активно (0% нагрузки в фоне)
+    if (!updateCheckTimer) {
+      updateCheckTimer = setInterval(() => {
+        if (!document.hidden) checkForRemoteUpdateSilently(false);
+      }, 20 * 60 * 1000);
+    }
+
+    // Проверка при возвращении в окно, если прошло больше 20 минут
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && Date.now() - lastRemoteCheckAt > 20 * 60 * 1000) {
+        checkForRemoteUpdateSilently(false);
+      }
+    });
+
+    // На iPhone отслеживаем появление нового Service Worker
+    if (!getBridge().isDesktopApp && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (!reg) return;
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              pendingRemoteUpdate = {
+                mode: 'sw',
+                worker: nw,
+                latestMsg: 'Свежая версия загружена — нажмите «Обновить сейчас» для перезапуска',
+              };
+              updateBannerDismissedSession = false;
+              renderUpdateBanner(false);
+            }
+          });
+        });
+      }).catch(() => {});
+    }
+  }
+
+  // ===== 9. ИНИЦИАЛИЗАЦИЯ И ПЕРЕХВАТ РЕНДЕРА =====
   function hookGlobalLifecycle() {
     if (typeof global.renderAll === 'function' && !global.renderAll._v31Hooked) {
       const origRenderAll = global.renderAll;
       global.renderAll = function (...args) {
         const res = origRenderAll.apply(this, args);
         syncLayoutFromSettings();
+        sanitizeActiveProfileIfNeeded();
         ensureStudioV31Blocks();
         ensurePcSecurityAndBackupBlock();
+        ensureUpdateSettingsRow();
         syncPcPinStatus();
         applyLayoutToDom(false);
         animateChangedCounters();
@@ -1200,8 +1575,10 @@
       const origOpenStudio = global.openStudio;
       global.openStudio = function (...args) {
         const res = origOpenStudio.apply(this, args);
+        sanitizeActiveProfileIfNeeded();
         ensureStudioV31Blocks();
         ensurePcSecurityAndBackupBlock();
+        ensureUpdateSettingsRow();
         syncStudioLayoutControls();
         syncPcPinStatus();
         return res;
@@ -1219,17 +1596,22 @@
     hookGlobalLifecycle();
     setupTactileMotionListeners();
     ensureModularBentoGrid();
+    sanitizeActiveProfileIfNeeded();
     ensureStudioV31Blocks();
     ensurePcSecurityAndBackupBlock();
     applyLayoutToDom(false);
+    initUpdateNotificationSystem();
   }
 
   global.HelpV31Engine = {
     V31_ROLES,
+    CURRENT_RELEASE_VERSION,
     init: initV31Engine,
     onRender: () => {
       syncLayoutFromSettings();
+      sanitizeActiveProfileIfNeeded();
       ensureStudioV31Blocks();
+      ensureUpdateSettingsRow();
       applyLayoutToDom(false);
       animateChangedCounters();
     },
@@ -1237,12 +1619,16 @@
       requestAnimationFrame(updateNavGliderPosition);
     },
     onOpenStudio: () => {
+      sanitizeActiveProfileIfNeeded();
       ensureStudioV31Blocks();
+      ensureUpdateSettingsRow();
       syncStudioLayoutControls();
     },
     applyRoleWithLayout,
     togglePrivacyBlur,
     toggleLayoutLocked,
+    showReleaseNotes: () => renderUpdateBanner(true),
+    checkUpdateNow: () => checkForRemoteUpdateSilently(true),
   };
 
   if (document.readyState === 'loading') {

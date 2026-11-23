@@ -409,7 +409,7 @@ function addLesson({
   const wt = [0, 1, 2].includes(Number(week_type)) ? Number(week_type) : 0;
   const st = normalizeTime(start_time) || '08:30';
   const et = normalizeTime(end_time) || '';
-  const cleanSubj = String(subject || '').trim() || 'Урок';
+  const cleanSubj = String(subject || '').trim() || 'Событие';
 
   let num = parseInt(lesson_num, 10) || 0;
   if (!num) {

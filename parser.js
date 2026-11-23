@@ -109,7 +109,7 @@ function parseScheduleText(rawText = '', defaultDay = null, defaultWeekType = 0)
         }
       }
 
-      const subject = restText.replace(/[\s,—–-]+$/, '').trim() || 'Урок';
+      const subject = restText.replace(/[\s,—–-]+$/, '').trim() || 'Событие';
       if (startTime) {
         lessons.push({
           day_of_week: day,
@@ -192,7 +192,7 @@ function getConfiguredCategories() {
       }
     }
   } catch {}
-  return ['Учёба', 'Проекты', 'Личное'];
+  return ['Работа', 'Проекты', 'Личное'];
 }
 
 function guessGlobalCategory(text = '') {
@@ -205,11 +205,6 @@ function guessGlobalCategory(text = '') {
   if (/работ|заказ|клиент|отч[её]т|созвон|встреч|смен|дедлайн|зарплат|офис/.test(low)) {
     if (cats.includes('Работа')) return 'Работа';
     if (cats.includes('Проекты')) return 'Проекты';
-  }
-  if (/уч[её]б|экзамен|контрольн|олимпиад|реферат|проект по|школ|урок|матем|алгебр|физик|англ|домашк|дз/.test(low)) {
-    if (cats.includes('Учёба')) return 'Учёба';
-    if (cats.includes('Домашка')) return 'Домашка';
-    if (cats.includes('Работа')) return 'Работа';
   }
   if (/проект|дизайн|портфолио|сайт|бот|приложен|код|фигм/.test(low)) {
     if (cats.includes('Проекты')) return 'Проекты';
@@ -454,17 +449,17 @@ async function callGeminiGenerate(parts, systemInstruction = '') {
 
 // Распознавание скриншота/фото расписания через Gemini
 async function parseScheduleImageWithGemini(base64Data, mimeType = 'image/jpeg', caption = '') {
-  const prompt = `Распознай школьное расписание с изображения.
+  const prompt = `Распознай почасовое расписание или график с изображения.
 Верни JSON объект формата:
 {
   "lessons": [
     {
       "day_of_week": 1, // 1=Понедельник ... 7=Воскресенье
       "lesson_num": 1,
-      "start_time": "08:30", // формат HH:MM
-      "end_time": "09:15", // формат HH:MM или ""
-      "subject": "Название предмета",
-      "room_or_note": "кабинет или примечание, если видно, иначе пусто"
+      "start_time": "09:00", // формат HH:MM
+      "end_time": "10:00", // формат HH:MM или ""
+      "subject": "Название события или блока",
+      "room_or_note": "место или примечание, если видно, иначе пусто"
     }
   ]
 }
