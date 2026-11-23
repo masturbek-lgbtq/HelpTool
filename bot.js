@@ -71,6 +71,8 @@ const {
   getInboxEvent,
   removeInboxTarget,
   reclassifyInboxEvent,
+  exportVaultBackup,
+  importVaultBackup,
 } = require('./db');
 
 const {
@@ -2055,7 +2057,7 @@ function isAllowedAppUpdatePath(relPath) {
     ) ||
     relPath === 'public/index.html' ||
     relPath === 'public/joker-icon-256.png' ||
-    /^public\/gallery\/[a-zA-Z0-9._-]+$/.test(relPath)
+    /^public\/(gallery|css|js)\/[a-zA-Z0-9._-]+$/.test(relPath)
   );
 }
 
@@ -2354,16 +2356,23 @@ async function applyRepoUpdate() {
   }
 }
 
+function safeEqualToken(a, b) {
+  if (!a || !b || typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 function verifyWebRequest(req, parsedUrl) {
-  const host = String(req.headers.host || '');
-  if (host.startsWith('127.0.0.1') || host.startsWith('localhost')) {
+  if (isLoopbackClient(req)) {
     return true;
   }
   const webKey = getWebAccessKey();
   if (!webKey) return false;
   const keyFromQuery = parsedUrl.searchParams.get('k') || '';
   const keyFromHeader = String(req.headers['x-access-key'] || '');
-  if (keyFromQuery === webKey || keyFromHeader === webKey) {
+  if (safeEqualToken(keyFromQuery, webKey) || safeEqualToken(keyFromHeader, webKey)) {
     return true;
   }
   return false;
@@ -2395,8 +2404,16 @@ function bumpDataVersion() {
   dataVersion++;
 }
 
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'Referrer-Policy': 'no-referrer',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
+
 function sendJson(res, status, data) {
   res.writeHead(status, {
+    ...SECURITY_HEADERS,
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
   });
@@ -2472,6 +2489,20 @@ function startWebServer() {
         }
       }
 
+      if (pathname.startsWith('/css/') || pathname.startsWith('/js/')) {
+        const folder = pathname.startsWith('/css/') ? 'css' : 'js';
+        const safeName = path.basename(pathname);
+        if (/^[a-zA-Z0-9._-]+$/.test(safeName)) {
+          const assetPath = path.join(__dirname, 'public', folder, safeName);
+          const mime = folder === 'css'
+            ? 'text/css; charset=utf-8'
+            : 'application/javascript; charset=utf-8';
+          if (sendStaticCached(req, res, assetPath, mime, 'no-cache')) {
+            return;
+          }
+        }
+      }
+
       if (pathname.startsWith('/gallery/')) {
         const relPath = path.join('gallery', path.basename(pathname));
         const imgPath = path.join(__dirname, 'public', relPath);
@@ -2523,10 +2554,13 @@ function startWebServer() {
           const allSettings = getAllSettings();
           const hasGemini = Boolean(getActiveGeminiKey());
           const hasBotToken = Boolean(getActiveBotToken());
+          const hasPin = Boolean(allSettings.pin_hash);
           delete allSettings.gemini_api_key;
           delete allSettings.bot_token;
+          delete allSettings.pin_hash;
           allSettings.has_gemini_key = hasGemini;
           allSettings.has_bot_token = hasBotToken;
+          allSettings.has_pin = hasPin;
           allSettings.bot_username = telegramBotUsername;
 
           const schoolOn = isSchoolEnabled();
@@ -2757,12 +2791,19 @@ function startWebServer() {
             'eco_mode',
             'user_profile',
             'profile_config_json',
+            'layout_config_json',
             'custom_themes_json',
+            'auto_lock_sec',
             'bot_token',
             'gemini_api_key',
           ];
+          const isLocal = isLoopbackClient(req);
           for (const k of allowedKeys) {
             if (body[k] !== undefined) {
+              if ((k === 'bot_token' || k === 'gemini_api_key') && !isLocal) {
+                sendJson(res, 403, { error: 'Изменение секретных ключей разрешено только локально с ПК' });
+                return;
+              }
               const val = (k === 'bot_token' || k === 'gemini_api_key')
                 ? String(body[k]).trim()
                 : String(body[k]);
@@ -2770,7 +2811,7 @@ function startWebServer() {
             }
           }
           let telegram = null;
-          if (body.bot_token !== undefined) {
+          if (body.bot_token !== undefined && isLocal) {
             if (String(body.bot_token).trim()) {
               telegram = await ensureTelegramRunning();
             } else {
@@ -2778,6 +2819,77 @@ function startWebServer() {
             }
           }
           sendJson(res, 200, { ok: true, telegram });
+          return;
+        }
+
+        // PIN-защита экрана (хеширование SHA-256 на сервере без передачи хеша наружу)
+        if (pathname === '/api/pin/verify' && req.method === 'POST') {
+          const savedHash = getSetting('pin_hash', '');
+          if (!savedHash) {
+            sendJson(res, 200, { ok: true });
+            return;
+          }
+          const pin = String(body.pin || '').trim();
+          const candidate = crypto.createHash('sha256').update(`helptool-pin-v31:${pin}`).digest('hex');
+          const match = safeEqualToken(candidate, savedHash);
+          sendJson(res, 200, { ok: match });
+          return;
+        }
+
+        if (pathname === '/api/pin/set' && req.method === 'POST') {
+          if (!isLoopbackClient(req)) {
+            sendJson(res, 403, { error: 'Управление PIN-кодом разрешено только локально с ПК' });
+            return;
+          }
+          const savedHash = getSetting('pin_hash', '');
+          if (savedHash) {
+            const curPin = String(body.currentPin || '').trim();
+            const curHash = crypto.createHash('sha256').update(`helptool-pin-v31:${curPin}`).digest('hex');
+            if (!safeEqualToken(curHash, savedHash)) {
+              sendJson(res, 403, { ok: false, error: 'Неверный текущий PIN-код' });
+              return;
+            }
+          }
+          const newPin = String(body.newPin || '').trim();
+          if (!newPin) {
+            setSetting('pin_hash', '');
+            sendJson(res, 200, { ok: true, enabled: false });
+            return;
+          }
+          if (!/^\d{4}$/.test(newPin)) {
+            sendJson(res, 400, { ok: false, error: 'PIN-код должен состоять из 4 цифр' });
+            return;
+          }
+          const nextHash = crypto.createHash('sha256').update(`helptool-pin-v31:${newPin}`).digest('hex');
+          setSetting('pin_hash', nextHash);
+          sendJson(res, 200, { ok: true, enabled: true });
+          return;
+        }
+
+        // Резервное копирование и восстановление базы (строго локально с ПК)
+        if (pathname === '/api/backup/export') {
+          if (!isLoopbackClient(req)) {
+            sendJson(res, 403, { error: 'Экспорт базы разрешён только локально с ПК' });
+            return;
+          }
+          const dump = exportVaultBackup();
+          sendJson(res, 200, { ok: true, backup: dump });
+          return;
+        }
+
+        if (pathname === '/api/backup/import' && req.method === 'POST') {
+          if (!isLoopbackClient(req)) {
+            sendJson(res, 403, { error: 'Импорт базы разрешён только локально с ПК' });
+            return;
+          }
+          try {
+            createAutoBackup();
+            importVaultBackup(body.backup || body);
+            bumpDataVersion();
+            sendJson(res, 200, { ok: true });
+          } catch (err) {
+            sendJson(res, 400, { ok: false, error: err.message });
+          }
           return;
         }
 

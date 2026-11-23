@@ -1,4 +1,4 @@
-const APP_VERSION = '3.0.1';
+const APP_VERSION = '3.1.0';
 const CORE_CACHE = `helptool-ios-core-${APP_VERSION}`;
 const MEDIA_CACHE = 'helptool-ios-media-v2';
 
@@ -7,12 +7,14 @@ const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
   './css/app.css',
+  './css/v31-motion-layout.css',
   './js/crypto.js',
   './js/storage.js',
   './js/parser.js',
   './js/calendar.js',
   './js/themes.js',
   './js/app.js',
+  './js/v31-engine.js',
   './assets/icon-180.png',
   './assets/icon-192.png',
   './assets/gallery/art-02.jpg',

@@ -149,7 +149,10 @@ const DEFAULT_SETTINGS = {
   eco_mode: '0',
   user_profile: '',
   profile_config_json: '',
+  layout_config_json: '',
   custom_themes_json: '',
+  pin_hash: '',
+  auto_lock_sec: '0',
   bot_token: '',
   gemini_api_key: '',
 };
@@ -1274,6 +1277,184 @@ function reclassifyInboxEvent(eventId, newType) {
   };
 }
 
+// ================= ЗАЩИЩЁННЫЙ ЭКСПОРТ И ИМПОРТ БАЗЫ (БЕЗ СЕКРЕТНЫХ ТОКЕНОВ) =================
+function exportVaultBackup() {
+  const settings = getAllSettings();
+  delete settings.bot_token;
+  delete settings.gemini_api_key;
+  delete settings.owner_user_id;
+  delete settings.owner_chat_id;
+  delete settings.pin_hash;
+
+  return {
+    app: 'HelpTool',
+    version: '3.1.0',
+    exportedAt: new Date().toISOString(),
+    settings,
+    lessons: db.prepare(`SELECT * FROM lessons ORDER BY id ASC`).all(),
+    plans: db.prepare(`SELECT * FROM plans ORDER BY id ASC`).all(),
+    habits: db.prepare(`SELECT * FROM habits ORDER BY id ASC`).all(),
+    habitLogs: db.prepare(`SELECT * FROM habit_logs ORDER BY id ASC`).all(),
+    books: db.prepare(`SELECT * FROM books ORDER BY id ASC`).all(),
+    frozenDays: db.prepare(`SELECT * FROM frozen_days ORDER BY date_str ASC`).all(),
+  };
+}
+
+function importVaultBackup(payload) {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Некорректный формат файла резервной копии');
+  }
+  const safeSettingKeys = [
+    'pause_lessons',
+    'pause_all',
+    'lesson_lead_minutes',
+    'morning_digest_enabled',
+    'morning_digest_offset_min',
+    'morning_digest_fallback_time',
+    'evening_habits_enabled',
+    'evening_habits_time',
+    'week_cycle_mode',
+    'sound_enabled',
+    'fx_enabled',
+    'eco_mode',
+    'user_profile',
+    'profile_config_json',
+    'layout_config_json',
+    'custom_themes_json',
+  ];
+
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    if (payload.settings && typeof payload.settings === 'object') {
+      for (const k of safeSettingKeys) {
+        if (payload.settings[k] !== undefined) {
+          setSetting(k, String(payload.settings[k]));
+        }
+      }
+    }
+
+    if (Array.isArray(payload.lessons)) {
+      db.prepare(`DELETE FROM lessons`).run();
+      const ins = db.prepare(`
+        INSERT INTO lessons (day_of_week, week_type, lesson_num, start_time, end_time, subject, room_or_note, join_url, cancelled_date, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const l of payload.lessons) {
+        ins.run(
+          Number(l.day_of_week) || 1,
+          Number(l.week_type) || 0,
+          Number(l.lesson_num) || 1,
+          String(l.start_time || '09:00'),
+          String(l.end_time || ''),
+          String(l.subject || 'Занятие'),
+          String(l.room_or_note || ''),
+          String(l.join_url || ''),
+          String(l.cancelled_date || ''),
+          l.is_active === 0 ? 0 : 1
+        );
+      }
+    }
+
+    if (Array.isArray(payload.plans)) {
+      db.prepare(`DELETE FROM plans`).run();
+      const ins = db.prepare(`
+        INSERT INTO plans (title, list_type, plan_date, remind_time, reminded, is_done, category, is_priority)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const p of payload.plans) {
+        ins.run(
+          String(p.title || 'Задача'),
+          p.list_type === 'global' || p.list_type === 'simple' ? 'global' : 'dated',
+          String(p.plan_date || ''),
+          String(p.remind_time || ''),
+          p.reminded ? 1 : 0,
+          p.is_done ? 1 : 0,
+          String(p.category || ''),
+          p.is_priority ? 1 : 0
+        );
+      }
+    }
+
+    if (Array.isArray(payload.habits)) {
+      db.prepare(`DELETE FROM habits`).run();
+      db.prepare(`DELETE FROM habit_logs`).run();
+      const idMap = new Map();
+      const insH = db.prepare(`
+        INSERT INTO habits (title, kind, unit, target_value, days_mask, is_active, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const h of payload.habits) {
+        const info = insH.run(
+          String(h.title || 'Привычка'),
+          h.kind === 'value' ? 'value' : 'check',
+          String(h.unit || ''),
+          String(h.target_value || ''),
+          String(h.days_mask || '1,2,3,4,5,6,7'),
+          h.is_active === 0 ? 0 : 1,
+          Number(h.sort_order) || 0
+        );
+        if (h.id) idMap.set(Number(h.id), Number(info.lastInsertRowid));
+      }
+
+      if (Array.isArray(payload.habitLogs)) {
+        const insL = db.prepare(`
+          INSERT OR REPLACE INTO habit_logs (habit_id, date_str, status, value_text)
+          VALUES (?, ?, ?, ?)
+        `);
+        for (const l of payload.habitLogs) {
+          const newHid = idMap.get(Number(l.habit_id)) || Number(l.habit_id);
+          if (newHid && l.date_str) {
+            insL.run(newHid, String(l.date_str), String(l.status || 'done'), String(l.value_text || ''));
+          }
+        }
+      } else if (payload.habitLogs && typeof payload.habitLogs === 'object') {
+        // Совместимость с форматом резервной копии iPhone ("<habitId>:<YYYY-MM-DD>": { status, value })
+        const insL = db.prepare(`
+          INSERT OR REPLACE INTO habit_logs (habit_id, date_str, status, value_text)
+          VALUES (?, ?, ?, ?)
+        `);
+        for (const [k, v] of Object.entries(payload.habitLogs)) {
+          const [hidStr, dStr] = k.split(':');
+          const newHid = idMap.get(Number(hidStr)) || Number(hidStr);
+          if (newHid && dStr && v && v.status) {
+            insL.run(newHid, dStr, String(v.status), String(v.value || ''));
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(payload.books)) {
+      db.prepare(`DELETE FROM books`).run();
+      const insB = db.prepare(`
+        INSERT INTO books (title, author, status, note, rating)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      for (const b of payload.books) {
+        insB.run(
+          String(b.title || 'Книга'),
+          String(b.author || ''),
+          ['planned', 'reading', 'done'].includes(b.status) ? b.status : 'planned',
+          String(b.note || ''),
+          Math.max(0, Math.min(5, Number(b.rating) || 0))
+        );
+      }
+    }
+
+    if (Array.isArray(payload.frozenDays)) {
+      for (const f of payload.frozenDays) {
+        const dStr = typeof f === 'string' ? f : f?.date_str;
+        if (dStr) markDayFrozen(String(dStr), 'backup');
+      }
+    }
+
+    db.exec('COMMIT');
+    frozenDaysCache = null;
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch {}
+    throw err;
+  }
+}
+
 module.exports = {
   db,
   DAY_NAMES_FULL,
@@ -1350,4 +1531,6 @@ module.exports = {
   getInboxEvent,
   removeInboxTarget,
   reclassifyInboxEvent,
+  exportVaultBackup,
+  importVaultBackup,
 };

@@ -19,6 +19,7 @@
       last_backup_at: '',
       user_profile: 'custom',
       profile_config_json: '',
+      layout_config_json: '',
       custom_themes_json: '',
     },
     plans: [],      // { id, title, list_type:'dated'|'global', plan_date, remind_time, category, is_priority, is_done, created_at }

@@ -660,6 +660,9 @@
     renderHabitsView();
     renderBooksView();
     renderStudioSettingsState();
+    if (global.HelpV31Engine && typeof global.HelpV31Engine.onRender === 'function') {
+      global.HelpV31Engine.onRender();
+    }
   }
 
   function switchView(viewId) {
@@ -672,6 +675,9 @@
       btn.classList.toggle('active', btn.getAttribute('data-view') === viewId);
     });
     renderHeader();
+    if (global.HelpV31Engine && typeof global.HelpV31Engine.onSwitchView === 'function') {
+      global.HelpV31Engine.onSwitchView();
+    }
   }
 
   function renderHeader() {
@@ -1083,6 +1089,9 @@
     renderStudioThemes();
     renderStudioProfilePane();
     renderStudioSettingsState();
+    if (global.HelpV31Engine && typeof global.HelpV31Engine.onOpenStudio === 'function') {
+      global.HelpV31Engine.onOpenStudio();
+    }
   }
 
   function closeStudio() {
@@ -2585,6 +2594,31 @@
       refreshAndRender();
     }
   }
+
+  global.HelpAppBridge = {
+    isDesktopApp: false,
+    getProfilePresets: () => PROFILE_PRESETS,
+    getProfileConfig: () => PROFILE_CONFIG,
+    setProfileConfig: (cfg) => {
+      PROFILE_CONFIG = normalizeProfileConfig(cfg);
+    },
+    persistProfileConfig: async () => {
+      await persistProfileConfig();
+    },
+    renderStudioProfilePane: () => {
+      renderStudioProfilePane();
+    },
+    getSettings: () => (STATE && STATE.settings ? STATE.settings : {}),
+    saveSetting: async (key, val) => {
+      await Storage.updateSetting(key, val);
+    },
+    playSound: (t) => playUiSound(t),
+    toastStudio: (msg) => flashStudioToast(msg),
+    toastMain: (msg) => showToast(msg),
+    reloadState: async () => {
+      refreshAndRender();
+    },
+  };
 
   boot();
 })(window);
