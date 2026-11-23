@@ -103,6 +103,11 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
   );
+
+  CREATE INDEX IF NOT EXISTS idx_plans_type_date ON plans(list_type, plan_date, is_done);
+  CREATE INDEX IF NOT EXISTS idx_lessons_active_day ON lessons(is_active, day_of_week);
+  CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(date_str);
+  CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_date ON habit_logs(habit_id, date_str);
 `);
 
 // Мягкая миграция колонок plans для глобальных планов (категория и важность)
@@ -141,6 +146,7 @@ const DEFAULT_SETTINGS = {
   last_evening_habits_date: '',
   sound_enabled: '1',
   fx_enabled: '1',
+  eco_mode: '0',
   user_profile: '',
   profile_config_json: '',
   custom_themes_json: '',
@@ -324,15 +330,24 @@ if (getSetting('migrated_v2_notes_to_global', '0') !== '1') {
   }
 }
 
+let frozenDaysCache = null;
+
+function ensureFrozenDaysCache() {
+  if (frozenDaysCache) return frozenDaysCache;
+  const rows = db.prepare(`SELECT date_str FROM frozen_days`).all();
+  frozenDaysCache = new Set(rows.map((r) => r.date_str));
+  return frozenDaysCache;
+}
+
 function markDayFrozen(dateStr, reason = 'pause') {
   db.prepare(`
     INSERT OR IGNORE INTO frozen_days (date_str, reason) VALUES (?, ?)
   `).run(dateStr, reason);
+  if (frozenDaysCache) frozenDaysCache.add(dateStr);
 }
 
 function isDayFrozen(dateStr) {
-  const row = db.prepare(`SELECT 1 FROM frozen_days WHERE date_str = ?`).get(dateStr);
-  return Boolean(row);
+  return ensureFrozenDaysCache().has(dateStr);
 }
 
 // Определение текущей недели (1 или 2) для двухнедельного цикла

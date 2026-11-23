@@ -72,13 +72,14 @@ body {
 .fx-canvas {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 2;
   width: 100%;
   height: 100%;
   pointer-events: none;
 }
 
-body.no-fx .fx-canvas {
+body.no-fx .fx-canvas,
+body.eco-mode .fx-canvas {
   display: none;
 }
 
@@ -103,8 +104,8 @@ body.app-locked .mobile-nav {
   top: 0;
   height: 100vh;
   background: var(--sidebar-glass);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-right: 1px solid var(--glass-border);
   padding: 16px 14px;
   display: flex;
@@ -157,10 +158,10 @@ body.app-locked .mobile-nav {
   --py: 0px;
   transform: translate3d(var(--px), var(--py), 0) scale(1.04);
   animation: artBreath 7.2s ease-in-out infinite;
-  will-change: transform;
 }
 
-body.no-fx .anime-poster img {
+body.no-fx .anime-poster img,
+body.eco-mode .anime-poster img {
   animation: none;
   transform: none;
 }
@@ -303,8 +304,8 @@ body.no-fx .anime-poster img {
   padding: 8px 10px;
   border-radius: 14px;
   background: var(--surface-glass);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
 }
 
@@ -365,8 +366,8 @@ body.no-fx .anime-poster img {
   padding: 10px 13px;
   border-radius: 13px;
   background: var(--surface-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--accent);
   box-shadow: var(--soft-shadow);
   font-size: 12.5px;
@@ -415,8 +416,8 @@ body.no-fx .anime-poster img {
   padding: 8px 13px;
   border-radius: 13px;
   background: var(--surface-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
   border-left: 3px solid var(--accent);
   cursor: pointer;
@@ -446,6 +447,7 @@ body.no-fx .anime-poster img {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  contain: layout paint style;
 }
 
 .chibi-wrap svg {
@@ -480,8 +482,42 @@ body.no-fx .anime-poster img {
 
 body.no-fx .chibi-hair-sway,
 body.no-fx .chibi-ear-sway,
-body.no-fx .chibi-eyes-blink {
+body.no-fx .chibi-eyes-blink,
+body.eco-mode .chibi-hair-sway,
+body.eco-mode .chibi-ear-sway,
+body.eco-mode .chibi-eyes-blink {
   animation: none;
+}
+
+body.window-idle .anime-poster img,
+body.window-idle .chibi-body-breath,
+body.window-idle .chibi-hair-sway,
+body.window-idle .chibi-ear-sway,
+body.window-idle .chibi-eyes-blink {
+  animation-play-state: paused !important;
+}
+
+body.eco-mode .sidebar,
+body.eco-mode .mobile-header,
+body.eco-mode .ios-install-banner,
+body.eco-mode .top-quote,
+body.eco-mode .quick-drawer,
+body.eco-mode .card,
+body.eco-mode .mobile-nav,
+body.eco-mode .studio-backdrop,
+body.eco-mode .skin-act-btn {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.eco-mode .card,
+body.eco-mode .sidebar,
+body.eco-mode .mobile-header,
+body.eco-mode .ios-install-banner,
+body.eco-mode .top-quote,
+body.eco-mode .quick-drawer,
+body.eco-mode .mobile-nav {
+  background: var(--surface) !important;
 }
 
 @keyframes hairSway {
@@ -753,8 +789,8 @@ select.input {
   padding: 12px;
   border-radius: var(--radius-card);
   background: var(--surface-glass);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--accent);
   box-shadow: var(--soft-shadow);
 }
@@ -833,13 +869,14 @@ select.input {
 
 .card {
   background: var(--surface-glass);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-card);
   box-shadow: var(--soft-shadow);
   overflow: hidden;
   min-width: 0;
+  contain: layout style;
 }
 
 .card-mb {
@@ -1222,8 +1259,8 @@ select.input {
   bottom: 0;
   z-index: 20;
   background: var(--sidebar-glass);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid var(--glass-border);
   padding: 6px 6px calc(6px + var(--safe-bottom));
 }
@@ -1567,7 +1604,8 @@ select.input {
   animation: chibiBreath 3.6s ease-in-out infinite;
 }
 
-body.no-fx .chibi-body-breath {
+body.no-fx .chibi-body-breath,
+body.eco-mode .chibi-body-breath {
   animation: none;
 }
 
@@ -1585,7 +1623,9 @@ body.no-fx .chibi-body-breath {
 .view-pane.active .card:nth-child(3) { animation-delay: 0.06s; }
 
 body.no-fx .view-pane.active .card,
-body.no-fx .view-pane.active .form-box {
+body.no-fx .view-pane.active .form-box,
+body.eco-mode .view-pane.active .card,
+body.eco-mode .view-pane.active .form-box {
   animation: none;
 }
 

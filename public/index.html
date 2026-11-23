@@ -73,8 +73,6 @@
       position: fixed;
       inset: 0;
       background: var(--scrim-bg);
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
       pointer-events: none;
       z-index: 0;
       transition: background-color 0.2s ease;
@@ -98,8 +96,8 @@
       height: 100vh;
       padding: 16px 13px;
       background: var(--sidebar-glass);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-right: 1px solid var(--glass-border);
       display: flex;
       flex-direction: column;
@@ -152,11 +150,11 @@
       object-position: 50% 18%;
       display: block;
       transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.06);
-      will-change: transform;
       animation: artBreath 7.5s ease-in-out infinite;
     }
 
-    body.no-fx .anime-poster img {
+    body.no-fx .anime-poster img,
+    body.eco-mode .anime-poster img {
       animation: none;
       transform: none;
     }
@@ -176,10 +174,11 @@
       width: 100%;
       height: 100%;
       pointer-events: none;
-      z-index: 0;
+      z-index: 2;
     }
 
-    body.no-fx .fx-canvas {
+    body.no-fx .fx-canvas,
+    body.eco-mode .fx-canvas {
       display: none;
     }
 
@@ -314,8 +313,8 @@
       margin-bottom: 12px;
       border-radius: 14px;
       background: var(--header-glass);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--glass-border);
     }
 
@@ -390,8 +389,8 @@
       padding: 7px 12px;
       border-radius: 12px;
       background: var(--surface-glass);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--glass-border);
       border-left: 3px solid var(--accent);
       cursor: pointer;
@@ -424,6 +423,7 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      contain: layout paint style;
     }
 
     .chibi-wrap svg {
@@ -458,8 +458,48 @@
 
     body.no-fx .chibi-hair-sway,
     body.no-fx .chibi-ear-sway,
-    body.no-fx .chibi-eyes-blink {
+    body.no-fx .chibi-eyes-blink,
+    body.eco-mode .chibi-hair-sway,
+    body.eco-mode .chibi-ear-sway,
+    body.eco-mode .chibi-eyes-blink {
       animation: none;
+    }
+
+    /* Пауза фоновых анимаций при потере фокуса окна (экономия GPU/CPU) */
+    body.window-idle .anime-poster img,
+    body.window-idle .chibi-body-breath,
+    body.window-idle .chibi-hair-sway,
+    body.window-idle .chibi-ear-sway,
+    body.window-idle .chibi-eyes-blink {
+      animation-play-state: paused !important;
+    }
+
+    /* Экономичный режим: отключает размытие стекла и анимации для минимальной нагрузки */
+    body.eco-mode .sidebar,
+    body.eco-mode .mobile-header,
+    body.eco-mode .top-quote,
+    body.eco-mode .icon-pill,
+    body.eco-mode .pill-btn,
+    body.eco-mode .quick-drawer,
+    body.eco-mode .toast-banner,
+    body.eco-mode .card,
+    body.eco-mode .form-box,
+    body.eco-mode .mobile-nav,
+    body.eco-mode .studio-backdrop,
+    body.eco-mode .skin-act-btn {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    body.eco-mode .card,
+    body.eco-mode .sidebar,
+    body.eco-mode .mobile-header,
+    body.eco-mode .top-quote,
+    body.eco-mode .form-box,
+    body.eco-mode .quick-drawer,
+    body.eco-mode .toast-banner,
+    body.eco-mode .mobile-nav {
+      background: var(--surface) !important;
     }
 
     @keyframes hairSway {
@@ -528,8 +568,8 @@
       border-radius: 999px;
       border: 1px solid var(--glass-border);
       background: var(--surface-glass);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       color: var(--text-muted);
       font-size: 14px;
       font-weight: 700;
@@ -632,8 +672,8 @@
     .pill-btn {
       border: 1px solid var(--glass-border);
       background: var(--surface-glass);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       color: var(--text);
       font-family: inherit;
       font-size: 12.5px;
@@ -794,8 +834,8 @@
       padding: 12px 14px;
       border-radius: var(--radius-card);
       background: var(--surface-glass);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--accent);
       box-shadow: var(--soft-shadow);
     }
@@ -823,7 +863,7 @@
       padding: 10px 14px;
       border-radius: 12px;
       background: var(--surface-glass);
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(10px);
       border: 1px solid var(--accent);
       font-size: 12.5px;
     }
@@ -896,13 +936,14 @@
     /* Чистая карточка Bento / раздела */
     .card {
       background: var(--surface-glass);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-card);
       box-shadow: var(--soft-shadow);
       overflow: hidden;
       min-width: 0;
+      contain: layout style;
     }
 
     .card-mb {
@@ -1214,7 +1255,7 @@
 
     .form-box {
       background: var(--surface-glass);
-      backdrop-filter: blur(18px);
+      backdrop-filter: blur(10px);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-card);
       padding: 14px 16px;
@@ -1372,8 +1413,8 @@
       bottom: 0;
       z-index: 20;
       background: var(--sidebar-glass);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-top: 1px solid var(--glass-border);
       padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
     }
@@ -1611,7 +1652,8 @@
       animation: chibiBreath 3.6s ease-in-out infinite;
     }
 
-    body.no-fx .chibi-body-breath {
+    body.no-fx .chibi-body-breath,
+    body.eco-mode .chibi-body-breath {
       animation: none;
     }
 
@@ -1630,7 +1672,9 @@
     .view-pane.active .bento-stack .card:nth-child(2) { animation-delay: 0.07s; }
 
     body.no-fx .view-pane.active .card,
-    body.no-fx .view-pane.active .form-box {
+    body.no-fx .view-pane.active .form-box,
+    body.eco-mode .view-pane.active .card,
+    body.eco-mode .view-pane.active .form-box {
       animation: none;
     }
 
@@ -1899,7 +1943,7 @@
       <div class="side-top">
         <div class="anime-card" id="sideAnimeCard" onclick="openStudio('themes')" title="Выбрать тему (16 артов)">
           <div class="anime-poster" id="sideAnimePoster">
-            <img id="heroArtImg" src="/gallery/art-02.jpg?v=hd4" alt="Аниме-тема" />
+            <img id="heroArtImg" src="/gallery/art-02.jpg?v=hd5" alt="Аниме-тема" decoding="async" />
           </div>
           <div class="anime-cap">
             <span class="anime-cap-name" id="sideSkinName">Готика · Черепа</span>
@@ -1948,7 +1992,7 @@
       <header class="mobile-header">
         <div class="mob-left">
           <div class="mob-avatar" onclick="openStudio('themes')" title="Сменить тему">
-            <img id="mobArtImg" src="/gallery/art-02.jpg?v=hd4" alt="Тема" />
+            <img id="mobArtImg" src="/gallery/art-02.jpg?v=hd5" alt="Тема" decoding="async" />
           </div>
           <div style="min-width:0;">
             <div class="mob-title" id="mobDateTitle">Сегодня</div>
@@ -2565,6 +2609,13 @@
               <span class="tweak-sub">Дыхание арта, параллакс, моргание мини-чибика и эффекты тем</span>
             </div>
             <button class="btn btn-primary" id="stFxBtn" onclick="toggleSetting('fx_enabled')">● Вкл</button>
+          </div>
+          <div class="tweak-row">
+            <div>
+              <span class="tweak-label">Экономичный режим (минимум нагрузки)</span>
+              <span class="tweak-sub">Отключает размытие стекла и все эффекты — для слабых ПК или работы от батареи</span>
+            </div>
+            <button class="btn" id="stEcoBtn" onclick="toggleSetting('eco_mode')">Выкл</button>
           </div>
           <div class="tweak-row">
             <div>
@@ -3345,7 +3396,7 @@
       root.style.setProperty('--accent-soft', `rgba(${acR}, ${acG}, ${acB}, 0.14)`);
       root.style.setProperty('--soft-shadow', effectiveMode === 'dark' ? '0 10px 30px rgba(0,0,0,0.36)' : '0 8px 26px rgba(20,20,30,0.06)');
 
-      const imgUrl = !skin.img ? '' : (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : `${skin.img}?v=hd4`;
+      const imgUrl = !skin.img ? '' : (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : `${skin.img}?v=hd5`;
       root.style.setProperty('--wallpaper-display', !imgUrl || level === 'off' ? 'none' : 'block');
       root.style.setProperty('--wallpaper-url', imgUrl ? `url('${imgUrl}')` : 'none');
       root.style.setProperty('--wallpaper-pos', skin.cropPos || '50% 18%');
@@ -3353,6 +3404,7 @@
 
       renderHeroArt();
       renderStudioThemes();
+      if (typeof window._syncFxState === 'function') window._syncFxState();
     }
 
     const CHIBI_THEMES = {
@@ -4132,11 +4184,11 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       if (topBtn) topBtn.textContent = skin.name.split('·')[0].trim();
 
       if (skin.img) {
-        const src = (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : `${skin.img}?v=hd4`;
+        const src = (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : `${skin.img}?v=hd5`;
         if (poster) {
           const curImg = document.getElementById('heroArtImg');
           if (!curImg || curImg.getAttribute('data-skin') !== skin.id) {
-            poster.innerHTML = `<img id="heroArtImg" data-skin="${skin.id}" src="${src}" alt="${escapeHtml(skin.name)}" style="object-position:${skin.cropPos || '50% 18%'};" />`;
+            poster.innerHTML = `<img id="heroArtImg" data-skin="${skin.id}" src="${src}" alt="${escapeHtml(skin.name)}" decoding="async" style="object-position:${skin.cropPos || '50% 18%'};" />`;
           }
         }
         if (mobImg) {
@@ -4227,21 +4279,61 @@ function buildUniqueChibiInner(type, mood, skinObj) {
     }
 
     let lastStateSig = '';
+    let lastServerVersion = '';
     let isPollingState = false;
+    let pollTimerId = null;
+
+    function getPollIntervalMs() {
+      if (document.hidden) return 0;
+      const hasBot = Boolean(STATE.settings && STATE.settings.has_bot_token);
+      return hasBot ? 12000 : 60000;
+    }
+
+    function scheduleNextPoll() {
+      if (pollTimerId) {
+        clearTimeout(pollTimerId);
+        pollTimerId = null;
+      }
+      const ms = getPollIntervalMs();
+      if (!ms) return;
+      pollTimerId = setTimeout(async () => {
+        pollTimerId = null;
+        if (!document.hidden) {
+          await loadState(true, true);
+        }
+        scheduleNextPoll();
+      }, ms);
+    }
 
     async function loadState(preserveDay = true, silent = false) {
       if (silent) {
-        if (isPollingState) return;
+        if (isPollingState || document.hidden) return;
         const active = document.activeElement;
         if (active && active.closest && active.closest('.live-render-zone')) return;
       }
       isPollingState = true;
       try {
-        const data = await api('/api/state');
-        const sig = JSON.stringify(data);
+        const headers = {};
+        if (accessKey) headers['X-Access-Key'] = accessKey;
+        const params = new URLSearchParams();
+        if (accessKey) params.set('k', accessKey);
+        if (silent && lastServerVersion) params.set('v', lastServerVersion);
+        const qs = params.toString();
+        const res = await fetch(qs ? `/api/state?${qs}` : '/api/state', { headers, cache: 'no-store' });
+        if (res.status === 304) return;
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+        if (data.stateVersion) {
+          if (silent && STATE.todayStr && data.stateVersion === lastServerVersion) return;
+          lastServerVersion = data.stateVersion;
+        }
         const firstLoad = !STATE.todayStr;
-        if (silent && !firstLoad && sig === lastStateSig) return;
-        lastStateSig = sig;
+        if (!data.stateVersion) {
+          const sig = JSON.stringify(data);
+          if (silent && !firstLoad && sig === lastStateSig) return;
+          lastStateSig = sig;
+        }
         STATE = {
           ...STATE,
           ...data,
@@ -5225,6 +5317,13 @@ function buildUniqueChibiInner(type, mood, skinObj) {
     }
 
     function renderStudioThemes() {
+      const badgeEl = document.querySelector('.anime-cap-badge');
+      if (badgeEl) badgeEl.textContent = `✦ ${SKINS.length} тем`;
+
+      // Ленивый рендер: не декодируем 25 обложек в фоне, пока окно Студии закрыто
+      const modal = document.getElementById('studioModal');
+      if (!modal || !modal.classList.contains('open')) return;
+
       document.querySelectorAll('#tweakModeGroup .seg-pill').forEach((b) => {
         b.classList.toggle('active', b.getAttribute('data-val') === UI_PREFS.modeOverride);
       });
@@ -5240,8 +5339,6 @@ function buildUniqueChibiInner(type, mood, skinObj) {
 
       const allBtn = document.getElementById('btnFilterAllSkins');
       if (allBtn) allBtn.textContent = `Все (${SKINS.length})`;
-      const badgeEl = document.querySelector('.anime-cap-badge');
-      if (badgeEl) badgeEl.textContent = `✦ ${SKINS.length} тем`;
 
       const hasModifiedDefaults =
         (CUSTOM_THEMES_STATE.deletedIds && CUSTOM_THEMES_STATE.deletedIds.length > 0) ||
@@ -5263,9 +5360,9 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       }
       grid.innerHTML = list
         .map((s) => {
-          const imgSrc = !s.img ? '' : (s.img.startsWith('data:') || s.img.startsWith('http')) ? s.img : `${s.img}?v=hd4`;
+          const imgSrc = !s.img ? '' : (s.img.startsWith('data:') || s.img.startsWith('http')) ? s.img : `${s.img}?v=hd5`;
           const thumb = imgSrc
-            ? `<img src="${imgSrc}" alt="${escapeHtml(s.name)}" style="object-position:${s.cropPos || '50% 20%'};" />`
+            ? `<img src="${imgSrc}" alt="${escapeHtml(s.name)}" loading="lazy" decoding="async" style="object-position:${s.cropPos || '50% 20%'};" />`
             : `<span>Без арта</span>`;
           return `
             <div class="skin-card ${s.id === UI_PREFS.skinId ? 'active' : ''}" onclick="selectSkin('${escapeHtml(s.id)}')">
@@ -5305,12 +5402,20 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       }
 
       const fxOn = s.fx_enabled !== '0';
+      const ecoOn = s.eco_mode === '1';
       document.body.classList.toggle('no-fx', !fxOn);
+      document.body.classList.toggle('eco-mode', ecoOn);
       const btnFx = document.getElementById('stFxBtn');
       if (btnFx) {
         btnFx.textContent = fxOn ? '● Вкл' : 'Выкл';
         btnFx.classList.toggle('btn-primary', fxOn);
       }
+      const btnEco = document.getElementById('stEcoBtn');
+      if (btnEco) {
+        btnEco.textContent = ecoOn ? '● Включён' : 'Выкл';
+        btnEco.classList.toggle('btn-primary', ecoOn);
+      }
+      if (typeof window._syncFxState === 'function') window._syncFxState();
 
       const soundOn = s.sound_enabled !== '0';
       const btnSnd = document.getElementById('stSoundBtn');
@@ -5412,7 +5517,7 @@ function buildUniqueChibiInner(type, mood, skinObj) {
     }, { passive: true });
 
     function spawnCompletionSparks(originEl = null) {
-      if (document.body.classList.contains('no-fx')) return;
+      if (document.body.classList.contains('no-fx') || document.body.classList.contains('eco-mode')) return;
       let cx = lastPointerXY.x || window.innerWidth / 2;
       let cy = lastPointerXY.y || window.innerHeight / 2;
       if (originEl && originEl.getBoundingClientRect) {
@@ -6161,105 +6266,179 @@ function buildUniqueChibiInner(type, mood, skinObj) {
       document.getElementById('focusPauseBtn').textContent = focusState.paused ? '▶' : '❚❚';
     }
 
-    // ================= ЖИВЫЕ ЧАСТИЦЫ И ПАРАЛЛАКС ПОРТРЕТА =================
+    // ================= ЖИВЫЕ ЧАСТИЦЫ И ПАРАЛЛАКС ПОРТРЕТА (ЭНЕРГОЭФФЕКТИВНЫЕ) =================
     function setupParallax() {
       let targetX = 0;
       let targetY = 0;
       let curX = 0;
       let curY = 0;
+      let rafId = 0;
+
+      function tick() {
+        rafId = 0;
+        if (document.hidden || document.body.classList.contains('no-fx') || document.body.classList.contains('eco-mode') || document.body.classList.contains('window-idle')) {
+          return;
+        }
+        curX += (targetX - curX) * 0.1;
+        curY += (targetY - curY) * 0.1;
+        const img = document.getElementById('heroArtImg');
+        if (img) {
+          img.style.setProperty('--px', `${curX.toFixed(2)}px`);
+          img.style.setProperty('--py', `${curY.toFixed(2)}px`);
+        }
+        if (Math.abs(targetX - curX) > 0.06 || Math.abs(targetY - curY) > 0.06) {
+          rafId = requestAnimationFrame(tick);
+        }
+      }
+
       window.addEventListener('mousemove', (e) => {
-        if (document.body.classList.contains('no-fx')) return;
+        if (document.hidden || document.body.classList.contains('no-fx') || document.body.classList.contains('eco-mode') || document.body.classList.contains('window-idle')) return;
         const w = window.innerWidth || 1;
         const h = window.innerHeight || 1;
         targetX = ((e.clientX / w) - 0.5) * -8;
         targetY = ((e.clientY / h) - 0.5) * -6;
-      });
-      function tick() {
-        curX += (targetX - curX) * 0.08;
-        curY += (targetY - curY) * 0.08;
-        const img = document.getElementById('heroArtImg');
-        if (img && !document.body.classList.contains('no-fx')) {
-          img.style.setProperty('--px', `${curX.toFixed(2)}px`);
-          img.style.setProperty('--py', `${curY.toFixed(2)}px`);
-        }
-        requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
+        if (!rafId) rafId = requestAnimationFrame(tick);
+      }, { passive: true });
     }
 
     function initFxParticles() {
       const canvas = document.getElementById('fxCanvas');
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { alpha: true });
       let W = 0;
       let H = 0;
+      let rafId = 0;
+      let lastTs = 0;
+      let windowFocused = !document.hidden;
       const parts = [];
-      const COUNT = 22;
+      const COUNT = 16;
+
+      let cachedMode = 'dot';
+      let cachedColor = '#e11d74';
+      let cachedEnabled = true;
+
+      function refreshSkinMeta() {
+        const skin = getCurrentSkin();
+        const pType = skin.particleType || 'auto';
+        if (skin.id === 'strict-minimal' || pType === 'off') {
+          cachedEnabled = false;
+          return;
+        }
+        cachedEnabled = true;
+        const isSakura = pType === 'sakura' || (pType === 'auto' && (skin.id === 'terrorblade-sakura' || skin.id === 'chocola-maid'));
+        const isSpark = pType === 'sparks' || (pType === 'auto' && ['ellen-zzz', 'cyber-rave-miku', 'gothic-miku-feathers', 'vergil-yamato', 'pink-poker-cards', 'cc-code-geass'].includes(skin.id));
+        const isSnow = pType === 'snow';
+        cachedMode = isSakura ? 'sakura' : isSpark ? 'spark' : 'dot';
+        cachedColor = isSnow ? '#ffffff' : (skin.colors?.pink || '#e11d74');
+      }
 
       function resize() {
         W = canvas.width = window.innerWidth;
         H = canvas.height = window.innerHeight;
       }
       resize();
-      window.addEventListener('resize', resize);
+      window.addEventListener('resize', resize, { passive: true });
 
       for (let i = 0; i < COUNT; i++) {
         parts.push({
           x: Math.random() * (window.innerWidth || 1200),
           y: Math.random() * (window.innerHeight || 800),
-          r: 2 + Math.random() * 3.2,
-          vy: 0.25 + Math.random() * 0.45,
-          vx: (Math.random() - 0.5) * 0.35,
+          r: 1.8 + Math.random() * 2.8,
+          vy: 0.45 + Math.random() * 0.65,
+          vx: (Math.random() - 0.5) * 0.45,
           rot: Math.random() * Math.PI * 2,
-          vr: (Math.random() - 0.5) * 0.015,
-          a: 0.22 + Math.random() * 0.35,
+          vr: (Math.random() - 0.5) * 0.024,
+          a: 0.14 + Math.random() * 0.2,
         });
       }
 
-      function draw() {
-        if (!document.hidden && !document.body.classList.contains('no-fx')) {
-          const skin = getCurrentSkin();
-          ctx.clearRect(0, 0, W, H);
-          const pType = skin.particleType || 'auto';
-          if (skin.id !== 'strict-minimal' && pType !== 'off') {
-            const isSakura = pType === 'sakura' || (pType === 'auto' && (skin.id === 'terrorblade-sakura' || skin.id === 'chocola-maid'));
-            const isSpark = pType === 'sparks' || (pType === 'auto' && ['ellen-zzz', 'cyber-rave-miku', 'gothic-miku-feathers', 'vergil-yamato', 'pink-poker-cards', 'cc-code-geass'].includes(skin.id));
-            const isSnow = pType === 'snow';
-            const accentColor = isSnow ? '#ffffff' : (skin.colors?.pink || '#e11d74');
-            for (const p of parts) {
-              p.y += isSpark ? -p.vy * 0.75 : p.vy;
-              p.x += p.vx + Math.sin(p.y * 0.012) * 0.18;
-              p.rot += p.vr;
-              if (p.y > H + 10) { p.y = -10; p.x = Math.random() * W; }
-              if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
-              if (p.x > W + 10) p.x = -10;
-              if (p.x < -10) p.x = W + 10;
+      function shouldRun() {
+        if (document.hidden || !windowFocused) return false;
+        if (document.body.classList.contains('no-fx') || document.body.classList.contains('eco-mode')) return false;
+        return cachedEnabled;
+      }
 
-              ctx.save();
-              ctx.globalAlpha = p.a;
-              ctx.translate(p.x, p.y);
-              ctx.rotate(p.rot);
-              ctx.fillStyle = accentColor;
-              if (isSakura) {
-                ctx.beginPath();
-                ctx.ellipse(0, 0, p.r * 1.4, p.r * 0.8, 0, 0, Math.PI * 2);
-                ctx.fill();
-              } else if (isSpark) {
-                ctx.fillRect(-p.r * 0.7, -p.r * 0.7, p.r * 1.4, p.r * 1.4);
-              } else {
-                ctx.beginPath();
-                ctx.arc(0, 0, p.r * 0.75, 0, Math.PI * 2);
-                ctx.fill();
-              }
-              ctx.restore();
-            }
+      function stopLoop(clear = true) {
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = 0;
+        }
+        if (clear) ctx.clearRect(0, 0, W, H);
+      }
+
+      function draw(now) {
+        if (!shouldRun()) {
+          stopLoop(true);
+          return;
+        }
+        rafId = requestAnimationFrame(draw);
+        if (now - lastTs < 42) return; // ~24 FPS достаточно для плавных частиц и в 2.5 раза экономичнее
+        lastTs = now;
+
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = cachedColor;
+        const isSpark = cachedMode === 'spark';
+        const isSakura = cachedMode === 'sakura';
+
+        for (const p of parts) {
+          p.y += isSpark ? -p.vy * 0.8 : p.vy;
+          p.x += p.vx + Math.sin(p.y * 0.012) * 0.22;
+          p.rot += p.vr;
+          if (p.y > H + 10) { p.y = -10; p.x = Math.random() * W; }
+          if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+          if (p.x > W + 10) p.x = -10;
+          if (p.x < -10) p.x = W + 10;
+
+          ctx.globalAlpha = p.a;
+          if (isSakura) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, p.r * 1.4, p.r * 0.8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          } else if (isSpark) {
+            ctx.fillRect(p.x - p.r * 0.7, p.y - p.r * 0.7, p.r * 1.4, p.r * 1.4);
+          } else {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r * 0.75, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function syncFxState() {
+        refreshSkinMeta();
+        const idle = document.hidden || !windowFocused;
+        document.body.classList.toggle('window-idle', idle);
+        if (shouldRun()) {
+          if (!rafId) {
+            lastTs = 0;
+            rafId = requestAnimationFrame(draw);
           }
         } else {
-          ctx.clearRect(0, 0, W, H);
+          stopLoop(true);
         }
-        requestAnimationFrame(draw);
       }
-      requestAnimationFrame(draw);
+
+      window._syncFxState = syncFxState;
+      window.addEventListener('blur', () => {
+        windowFocused = false;
+        syncFxState();
+      });
+      window.addEventListener('focus', () => {
+        windowFocused = true;
+        syncFxState();
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) windowFocused = false;
+        else windowFocused = document.hasFocus();
+        syncFxState();
+      });
+
+      syncFxState();
     }
 
     // ================= БЕЗОПАСНОЕ ОБНОВЛЕНИЕ ПРИЛОЖЕНИЯ (↻) =================
@@ -6358,11 +6537,19 @@ function buildUniqueChibiInner(type, mood, skinObj) {
     setupParallax();
     initFxParticles();
     loadUiPrefs();
-    loadState(false, false);
-    setInterval(() => loadState(true, true), 3000);
-    window.addEventListener('focus', () => loadState(true, true));
+    loadState(false, false).finally(() => scheduleNextPoll());
+    window.addEventListener('focus', () => {
+      loadState(true, true);
+      scheduleNextPoll();
+    });
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) loadState(true, true);
+      if (!document.hidden) {
+        loadState(true, true);
+        scheduleNextPoll();
+      } else if (pollTimerId) {
+        clearTimeout(pollTimerId);
+        pollTimerId = null;
+      }
     });
   </script>
 </body>

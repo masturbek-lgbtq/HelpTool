@@ -2390,6 +2390,11 @@ function readJsonBody(req) {
   });
 }
 
+let dataVersion = 1;
+function bumpDataVersion() {
+  dataVersion++;
+}
+
 function sendJson(res, status, data) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -2400,6 +2405,32 @@ function sendJson(res, status, data) {
 
 function startWebServer() {
   const indexHtmlPath = path.join(__dirname, 'public', 'index.html');
+  let cachedHtmlText = null;
+  let cachedHtmlMtime = 0;
+
+  function sendStaticCached(req, res, filePath, contentType, cacheControl) {
+    if (!fs.existsSync(filePath)) return false;
+    const st = fs.statSync(filePath);
+    if (!st.isFile()) return false;
+    const etag = `"${Math.floor(st.mtimeMs)}-${st.size}"`;
+    if (req.headers['if-none-match'] === etag) {
+      res.writeHead(304, {
+        ETag: etag,
+        'Cache-Control': cacheControl,
+      });
+      res.end();
+      return true;
+    }
+    const buf = fs.readFileSync(filePath);
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Content-Length': buf.length,
+      ETag: etag,
+      'Cache-Control': cacheControl,
+    });
+    res.end(buf);
+    return true;
+  }
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -2412,39 +2443,31 @@ function startWebServer() {
           res.end('Доступ ограничен. Откройте экран через кнопку внутри вашего Telegram-бота.');
           return;
         }
-        const html = fs.readFileSync(indexHtmlPath, 'utf8');
+        const st = fs.statSync(indexHtmlPath);
+        if (cachedHtmlText === null || st.mtimeMs !== cachedHtmlMtime) {
+          cachedHtmlText = fs.readFileSync(indexHtmlPath, 'utf8');
+          cachedHtmlMtime = st.mtimeMs;
+        }
         res.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
           Pragma: 'no-cache',
           Expires: '0',
         });
-        res.end(html);
+        res.end(cachedHtmlText);
         return;
       }
 
       if (pathname === '/joker-icon-256.png') {
         const pngPath = path.join(__dirname, 'public', 'joker-icon-256.png');
-        if (fs.existsSync(pngPath)) {
-          const buf = fs.readFileSync(pngPath);
-          res.writeHead(200, {
-            'Content-Type': 'image/png',
-            'Cache-Control': 'no-cache, must-revalidate',
-          });
-          res.end(buf);
+        if (sendStaticCached(req, res, pngPath, 'image/png', 'public, max-age=86400')) {
           return;
         }
       }
 
       if (pathname === '/joker-noir-v2.ico' || pathname === '/joker-noir.ico' || pathname === '/favicon.ico') {
         const icoPath = path.join(__dirname, 'joker-noir-v2.ico');
-        if (fs.existsSync(icoPath)) {
-          const buf = fs.readFileSync(icoPath);
-          res.writeHead(200, {
-            'Content-Type': 'image/x-icon',
-            'Cache-Control': 'no-cache, must-revalidate',
-          });
-          res.end(buf);
+        if (sendStaticCached(req, res, icoPath, 'image/x-icon', 'public, max-age=86400')) {
           return;
         }
       }
@@ -2452,22 +2475,16 @@ function startWebServer() {
       if (pathname.startsWith('/gallery/')) {
         const relPath = path.join('gallery', path.basename(pathname));
         const imgPath = path.join(__dirname, 'public', relPath);
-        if (fs.existsSync(imgPath) && fs.statSync(imgPath).isFile()) {
-          const ext = path.extname(imgPath).toLowerCase();
-          const mime =
-            ext === '.png'
-              ? 'image/png'
-              : ext === '.webp'
-              ? 'image/webp'
-              : ext === '.gif'
-              ? 'image/gif'
-              : 'image/jpeg';
-          const buf = fs.readFileSync(imgPath);
-          res.writeHead(200, {
-            'Content-Type': mime,
-            'Cache-Control': 'no-cache, must-revalidate',
-          });
-          res.end(buf);
+        const ext = path.extname(imgPath).toLowerCase();
+        const mime =
+          ext === '.png'
+            ? 'image/png'
+            : ext === '.webp'
+            ? 'image/webp'
+            : ext === '.gif'
+            ? 'image/gif'
+            : 'image/jpeg';
+        if (sendStaticCached(req, res, imgPath, mime, 'public, max-age=86400')) {
           return;
         }
       }
@@ -2478,9 +2495,15 @@ function startWebServer() {
           return;
         }
 
+        if (pathname === '/api/ping' && req.method === 'GET') {
+          sendJson(res, 200, { ok: true });
+          return;
+        }
+
         const today = toDateStr();
         if (getSetting('last_cleanup_date', '') !== today) {
           cleanupExpiredPlans(today);
+          bumpDataVersion();
         }
 
         if (pathname === '/api/desktop-alerts' && req.method === 'GET') {
@@ -2490,6 +2513,13 @@ function startWebServer() {
         }
 
         if (pathname === '/api/state' && req.method === 'GET') {
+          const stateVersion = `${today}:${dataVersion}`;
+          if (parsedUrl.searchParams.get('v') === stateVersion) {
+            res.writeHead(304, { 'Cache-Control': 'no-store' });
+            res.end();
+            return;
+          }
+
           const allSettings = getAllSettings();
           const hasGemini = Boolean(getActiveGeminiKey());
           const hasBotToken = Boolean(getActiveBotToken());
@@ -2500,7 +2530,20 @@ function startWebServer() {
           allSettings.bot_username = telegramBotUsername;
 
           const schoolOn = isSchoolEnabled();
+          const habitsGrid = getHabitsHistoryGrid(14, today);
+          const todayHabits = habitsGrid.habits.map((h) => {
+            const last = h.history[h.history.length - 1] || { scheduled: false, status: '', value: '' };
+            const { history, ...rest } = h;
+            return {
+              ...rest,
+              scheduled_today: last.scheduled,
+              log_status: last.status,
+              log_value: last.value,
+            };
+          });
+
           sendJson(res, 200, {
+            stateVersion,
             todayStr: today,
             nowTimeStr: toTimeStr(),
             isoDay: getIsoDayOfWeek(today),
@@ -2509,8 +2552,8 @@ function startWebServer() {
             settings: allSettings,
             todayLessons: schoolOn ? getLessonsForDate(today) : [],
             allLessons: schoolOn ? getAllLessons() : [],
-            todayHabits: getHabitsForDate(today),
-            habitsGrid: getHabitsHistoryGrid(14, today),
+            todayHabits,
+            habitsGrid,
             overduePlans: getOverdueDailyPlans(today),
             todayPlans: getPlansForDate(today),
             upcomingPlans: getUpcomingDatedPlans(today),
@@ -2521,6 +2564,9 @@ function startWebServer() {
         }
 
         const body = req.method === 'POST' ? await readJsonBody(req) : {};
+        if (req.method === 'POST' && pathname !== '/api/update/check') {
+          bumpDataVersion();
+        }
 
         if (pathname === '/api/quick-capture') {
           const out = executeSmartCapture(body.text || '');
@@ -2708,6 +2754,7 @@ function startWebServer() {
             'week_cycle_mode',
             'sound_enabled',
             'fx_enabled',
+            'eco_mode',
             'user_profile',
             'profile_config_json',
             'custom_themes_json',
@@ -2778,7 +2825,11 @@ function startWebServer() {
     const webKey = getWebAccessKey();
     const localSuffix = webKey ? `/?k=${webKey}` : '/';
     console.log(`Локальный экран запущен: http://127.0.0.1:${WEB_PORT}${localSuffix}`);
-    startCloudflareTunnel();
+    if (getActiveBotToken()) {
+      startCloudflareTunnel();
+    } else {
+      console.log('Cloudflare-туннель не запускается: Telegram-бот не подключён (экономия памяти).');
+    }
   });
 }
 
@@ -2795,6 +2846,8 @@ function isProcessAlive(pid) {
 }
 
 function startCloudflareTunnel() {
+  if (!getActiveBotToken()) return;
+  if (tunnelProcess) return;
   // Если туннель уже запущен и его процесс жив — переиспользуем его URL без пересоздания
   if (fs.existsSync(TUNNEL_STATE_FILE)) {
     try {
@@ -2907,6 +2960,7 @@ async function ensureTelegramRunning() {
     telegramBotUsername = me.username || '';
     console.log(`Бот запущен: @${telegramBotUsername}`);
     await registerCommands();
+    startCloudflareTunnel();
     updateTelegramMenuButton();
   } catch (err) {
     telegramBotUsername = '';
@@ -2942,10 +2996,12 @@ async function ensureTelegramRunning() {
               await handleMessage(update.message).catch((err) =>
                 console.error('Ошибка обработки сообщения:', err.message)
               );
+              bumpDataVersion();
             } else if (update.callback_query) {
               await handleCallbackQuery(update.callback_query).catch((err) =>
                 console.error('Ошибка обработки кнопки:', err.message)
               );
+              bumpDataVersion();
             }
           }
         } catch (err) {

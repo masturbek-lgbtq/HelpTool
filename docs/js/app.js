@@ -314,6 +314,7 @@
     renderHeroArt();
     renderStudioThemes();
     renderLockAvatar();
+    if (typeof global._syncFxState === 'function') global._syncFxState();
   }
 
   function renderLockAvatar() {
@@ -341,7 +342,7 @@
       if (poster) {
         const cur = document.getElementById('heroArtImg');
         if (!cur || cur.getAttribute('data-skin') !== skin.id) {
-          poster.innerHTML = `<img id="heroArtImg" data-skin="${skin.id}" src="${skin.img}" alt="${escapeHtml(skin.name)}" style="object-position:${skin.cropPos || '50% 18%'};" />`;
+          poster.innerHTML = `<img id="heroArtImg" data-skin="${skin.id}" src="${skin.img}" alt="${escapeHtml(skin.name)}" decoding="async" style="object-position:${skin.cropPos || '50% 18%'};" />`;
         }
       }
       if (mobImg) {
@@ -1119,12 +1120,17 @@
   }
 
   function renderStudioThemes() {
+    const chipEl = document.querySelector('.anime-chip');
+    if (chipEl) chipEl.textContent = `✦ ${SKINS.length} тем`;
+
+    // Ленивый рендер: не строим сетку из 25 обложек, пока Студия закрыта
+    const modal = document.getElementById('studioModal');
+    if (!modal || !modal.classList.contains('open')) return;
+
     const grid = document.getElementById('skinsGrid');
     if (!grid) return;
     const allBtn = document.getElementById('btnFilterAllSkins');
     if (allBtn) allBtn.textContent = `Все (${SKINS.length})`;
-    const chipEl = document.querySelector('.anime-chip');
-    if (chipEl) chipEl.textContent = `✦ ${SKINS.length} тем`;
 
     const hasMod =
       (CUSTOM_THEMES_STATE.deletedIds && CUSTOM_THEMES_STATE.deletedIds.length > 0) ||
@@ -1149,7 +1155,7 @@
 
     grid.innerHTML = list
       .map((s) => {
-        const thumb = s.img ? `<img src="${s.img}" alt="${escapeHtml(s.name)}" style="object-position:${s.cropPos || '50% 20%'};" loading="lazy" />` : '<span>Без арта</span>';
+        const thumb = s.img ? `<img src="${s.img}" alt="${escapeHtml(s.name)}" style="object-position:${s.cropPos || '50% 20%'};" loading="lazy" decoding="async" />` : '<span>Без арта</span>';
         return `
           <div class="skin-card ${s.id === UI_PREFS.skinId ? 'active' : ''}" data-select-skin="${escapeHtml(s.id)}">
             <div class="skin-thumb">
@@ -1177,10 +1183,20 @@
     const sec = STATE.security;
 
     const fxOn = s.fx_enabled !== '0';
+    const ecoOn = s.eco_mode === '1';
     document.body.classList.toggle('no-fx', !fxOn);
+    document.body.classList.toggle('eco-mode', ecoOn);
     const btnFx = document.getElementById('stFxBtn');
-    btnFx.textContent = fxOn ? '● Вкл' : 'Выкл';
-    btnFx.classList.toggle('btn-primary', fxOn);
+    if (btnFx) {
+      btnFx.textContent = fxOn ? '● Вкл' : 'Выкл';
+      btnFx.classList.toggle('btn-primary', fxOn);
+    }
+    const btnEco = document.getElementById('stEcoBtn');
+    if (btnEco) {
+      btnEco.textContent = ecoOn ? '● Включён' : 'Выкл';
+      btnEco.classList.toggle('btn-primary', ecoOn);
+    }
+    if (typeof global._syncFxState === 'function') global._syncFxState();
 
     const sndOn = s.sound_enabled !== '0';
     const btnSnd = document.getElementById('stSoundBtn');
@@ -1256,94 +1272,169 @@
     }
   }
 
-  // ===== Частицы и параллакс =====
+  // ===== Частицы и параллакс (энергоэффективные) =====
   function setupParticlesAndParallax() {
     let tx = 0, ty = 0, cx = 0, cy = 0;
+    let pRafId = 0;
+
+    function tickParallax() {
+      pRafId = 0;
+      if (document.hidden || document.body.classList.contains('no-fx') || document.body.classList.contains('eco-mode') || document.body.classList.contains('window-idle')) {
+        return;
+      }
+      cx += (tx - cx) * 0.1;
+      cy += (ty - cy) * 0.1;
+      const img = document.getElementById('heroArtImg');
+      if (img) {
+        img.style.setProperty('--px', `${cx.toFixed(2)}px`);
+        img.style.setProperty('--py', `${cy.toFixed(2)}px`);
+      }
+      if (Math.abs(tx - cx) > 0.06 || Math.abs(ty - cy) > 0.06) {
+        pRafId = requestAnimationFrame(tickParallax);
+      }
+    }
+
     global.addEventListener('mousemove', (e) => {
-      if (document.body.classList.contains('no-fx')) return;
+      if (document.hidden || document.body.classList.contains('no-fx') || document.body.classList.contains('eco-mode') || document.body.classList.contains('window-idle')) return;
       tx = (e.clientX / (global.innerWidth || 1) - 0.5) * -8;
       ty = (e.clientY / (global.innerHeight || 1) - 0.5) * -6;
-    });
+      if (!pRafId) pRafId = requestAnimationFrame(tickParallax);
+    }, { passive: true });
 
     const canvas = document.getElementById('fxCanvas');
-    const ctx = canvas ? canvas.getContext('2d') : null;
+    const ctx = canvas ? canvas.getContext('2d', { alpha: true }) : null;
+    if (!canvas || !ctx) return;
+
     let W = 0, H = 0;
+    let rafId = 0;
+    let lastTs = 0;
+    let windowFocused = !document.hidden;
     const parts = [];
-    const COUNT = 18;
+    const COUNT = 14;
+    let cachedMode = 'dot';
+    let cachedColor = '#e11d74';
+    let cachedEnabled = true;
+
+    function refreshSkinMeta() {
+      const skin = getCurrentSkin();
+      const pType = skin.particleType || 'auto';
+      if (skin.id === 'strict-minimal' || pType === 'off') {
+        cachedEnabled = false;
+        return;
+      }
+      cachedEnabled = true;
+      const isSakura = pType === 'sakura' || (pType === 'auto' && (skin.id === 'terrorblade-sakura' || skin.id === 'chocola-maid'));
+      const isSpark = pType === 'sparks' || (pType === 'auto' && ['ellen-zzz', 'cyber-rave-miku', 'gothic-miku-feathers', 'vergil-yamato', 'pink-poker-cards', 'cc-code-geass'].includes(skin.id));
+      const isSnow = pType === 'snow';
+      cachedMode = isSakura ? 'sakura' : isSpark ? 'spark' : 'dot';
+      cachedColor = isSnow ? '#ffffff' : (skin.colors.pink || '#e11d74');
+    }
 
     function resize() {
-      if (!canvas) return;
       W = canvas.width = global.innerWidth;
       H = canvas.height = global.innerHeight;
     }
     resize();
-    global.addEventListener('resize', resize);
+    global.addEventListener('resize', resize, { passive: true });
 
     for (let i = 0; i < COUNT; i++) {
       parts.push({
         x: Math.random() * (global.innerWidth || 400),
         y: Math.random() * (global.innerHeight || 800),
-        r: 2 + Math.random() * 3,
-        vy: 0.25 + Math.random() * 0.42,
-        vx: (Math.random() - 0.5) * 0.3,
+        r: 1.8 + Math.random() * 2.6,
+        vy: 0.45 + Math.random() * 0.62,
+        vx: (Math.random() - 0.5) * 0.4,
         rot: Math.random() * Math.PI * 2,
-        vr: (Math.random() - 0.5) * 0.015,
-        a: 0.22 + Math.random() * 0.34,
+        vr: (Math.random() - 0.5) * 0.022,
+        a: 0.14 + Math.random() * 0.2,
       });
     }
 
-    function frame() {
-      cx += (tx - cx) * 0.08;
-      cy += (ty - cy) * 0.08;
-      const img = document.getElementById('heroArtImg');
-      if (img && !document.body.classList.contains('no-fx')) {
-        img.style.setProperty('--px', `${cx.toFixed(2)}px`);
-        img.style.setProperty('--py', `${cy.toFixed(2)}px`);
-      }
+    function shouldRun() {
+      if (document.hidden || !windowFocused) return false;
+      if (document.body.classList.contains('no-fx') || document.body.classList.contains('eco-mode') || document.body.classList.contains('app-locked')) return false;
+      return cachedEnabled;
+    }
 
-      if (ctx) {
-        if (!document.hidden && !document.body.classList.contains('no-fx') && !document.body.classList.contains('app-locked')) {
-          const skin = getCurrentSkin();
-          ctx.clearRect(0, 0, W, H);
-          const pType = skin.particleType || 'auto';
-          if (skin.id !== 'strict-minimal' && pType !== 'off') {
-            const isSakura = pType === 'sakura' || (pType === 'auto' && (skin.id === 'terrorblade-sakura' || skin.id === 'chocola-maid'));
-            const isSpark = pType === 'sparks' || (pType === 'auto' && ['ellen-zzz', 'cyber-rave-miku', 'gothic-miku-feathers', 'vergil-yamato', 'pink-poker-cards', 'cc-code-geass'].includes(skin.id));
-            const isSnow = pType === 'snow';
-            ctx.fillStyle = isSnow ? '#ffffff' : (skin.colors.pink || '#e11d74');
-            for (const p of parts) {
-              p.y += isSpark ? -p.vy * 0.75 : p.vy;
-              p.x += p.vx + Math.sin(p.y * 0.012) * 0.16;
-              p.rot += p.vr;
-              if (p.y > H + 10) { p.y = -10; p.x = Math.random() * W; }
-              if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
-              if (p.x > W + 10) p.x = -10;
-              if (p.x < -10) p.x = W + 10;
-              ctx.save();
-              ctx.globalAlpha = p.a;
-              ctx.translate(p.x, p.y);
-              ctx.rotate(p.rot);
-              if (isSakura) {
-                ctx.beginPath();
-                ctx.ellipse(0, 0, p.r * 1.4, p.r * 0.8, 0, 0, Math.PI * 2);
-                ctx.fill();
-              } else if (isSpark) {
-                ctx.fillRect(-p.r * 0.7, -p.r * 0.7, p.r * 1.4, p.r * 1.4);
-              } else {
-                ctx.beginPath();
-                ctx.arc(0, 0, p.r * 0.75, 0, Math.PI * 2);
-                ctx.fill();
-              }
-              ctx.restore();
-            }
-          }
+    function stopLoop(clear = true) {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      if (clear) ctx.clearRect(0, 0, W, H);
+    }
+
+    function frame(now) {
+      if (!shouldRun()) {
+        stopLoop(true);
+        return;
+      }
+      rafId = requestAnimationFrame(frame);
+      if (now - lastTs < 42) return; // ~24 FPS
+      lastTs = now;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = cachedColor;
+      const isSpark = cachedMode === 'spark';
+      const isSakura = cachedMode === 'sakura';
+      for (const p of parts) {
+        p.y += isSpark ? -p.vy * 0.8 : p.vy;
+        p.x += p.vx + Math.sin(p.y * 0.012) * 0.2;
+        p.rot += p.vr;
+        if (p.y > H + 10) { p.y = -10; p.x = Math.random() * W; }
+        if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+        if (p.x > W + 10) p.x = -10;
+        if (p.x < -10) p.x = W + 10;
+        ctx.globalAlpha = p.a;
+        if (isSakura) {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, p.r * 1.4, p.r * 0.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (isSpark) {
+          ctx.fillRect(p.x - p.r * 0.7, p.y - p.r * 0.7, p.r * 1.4, p.r * 1.4);
         } else {
-          ctx.clearRect(0, 0, W, H);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 0.75, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
-      requestAnimationFrame(frame);
+      ctx.globalAlpha = 1;
     }
-    requestAnimationFrame(frame);
+
+    function syncFxState() {
+      refreshSkinMeta();
+      const idle = document.hidden || !windowFocused;
+      document.body.classList.toggle('window-idle', idle);
+      if (shouldRun()) {
+        if (!rafId) {
+          lastTs = 0;
+          rafId = requestAnimationFrame(frame);
+        }
+      } else {
+        stopLoop(true);
+      }
+    }
+
+    global._syncFxState = syncFxState;
+    global.addEventListener('blur', () => {
+      windowFocused = false;
+      syncFxState();
+    });
+    global.addEventListener('focus', () => {
+      windowFocused = true;
+      syncFxState();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) windowFocused = false;
+      else windowFocused = document.hasFocus();
+      syncFxState();
+    });
+
+    syncFxState();
   }
 
 
@@ -1356,7 +1447,7 @@
   }, { passive: true });
 
   function spawnCompletionSparks(originEl = null) {
-    if (document.body.classList.contains('no-fx')) return;
+    if (document.body.classList.contains('no-fx') || document.body.classList.contains('eco-mode')) return;
     let cx = lastPointerXY.x || (global.innerWidth || 390) / 2;
     let cy = lastPointerXY.y || (global.innerHeight || 844) / 2;
     if (originEl && originEl.getBoundingClientRect) {
@@ -2176,6 +2267,14 @@
     document.getElementById('stFxBtn')?.addEventListener('click', async () => {
       const next = STATE.settings.fx_enabled === '0' ? '1' : '0';
       await Storage.updateSetting('fx_enabled', next);
+      playUiSound('tap');
+      refreshAndRender();
+      flashStudioToast();
+    });
+
+    document.getElementById('stEcoBtn')?.addEventListener('click', async () => {
+      const next = STATE.settings.eco_mode === '1' ? '0' : '1';
+      await Storage.updateSetting('eco_mode', next);
       playUiSound('tap');
       refreshAndRender();
       flashStudioToast();

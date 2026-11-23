@@ -14,6 +14,7 @@
       pause_all: '0',
       sound_enabled: '1',
       fx_enabled: '1',
+      eco_mode: '0',
       auto_lock_sec: '60',
       last_backup_at: '',
       user_profile: 'custom',

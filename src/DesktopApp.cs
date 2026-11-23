@@ -27,9 +27,11 @@ namespace PersonalAssistantDesktop
         private static WebView2 webView;
         private static NotifyIcon trayIcon;
         private static System.Windows.Forms.Timer pollTimer;
+        private static System.Windows.Forms.Timer suspendTimer;
         private static Icon appIcon;
         private static bool isPolling;
         private static bool isExiting;
+        private static bool isWebViewSuspended;
         private static string lastAlertUrl = "";
 
         [DllImport("user32.dll")]
@@ -164,7 +166,7 @@ namespace PersonalAssistantDesktop
         {
             try
             {
-                var res = Http.GetAsync(BaseUrl + "/api/state").GetAwaiter().GetResult();
+                var res = Http.GetAsync(BaseUrl + "/api/ping").GetAwaiter().GetResult();
                 return res.IsSuccessStatusCode;
             }
             catch
@@ -226,7 +228,26 @@ namespace PersonalAssistantDesktop
             };
             mainForm.Controls.Add(webView);
 
+            suspendTimer = new System.Windows.Forms.Timer { Interval = 350 };
+            suspendTimer.Tick += async (s, e) =>
+            {
+                suspendTimer.Stop();
+                await SuspendWebViewIfHiddenAsync();
+            };
+
             mainForm.Shown += async (s, e) => await InitWebViewAsync();
+
+            mainForm.Resize += (s, e) =>
+            {
+                if (mainForm.WindowState == FormWindowState.Minimized)
+                {
+                    ScheduleWebViewSuspend();
+                }
+                else if (mainForm.Visible)
+                {
+                    ResumeWebView();
+                }
+            };
 
             mainForm.FormClosing += (s, e) =>
             {
@@ -234,8 +255,71 @@ namespace PersonalAssistantDesktop
                 {
                     e.Cancel = true;
                     mainForm.Hide();
+                    ScheduleWebViewSuspend();
                 }
             };
+        }
+
+        private static void ScheduleWebViewSuspend()
+        {
+            try
+            {
+                if (webView != null && webView.CoreWebView2 != null)
+                {
+                    webView.CoreWebView2.MemoryUsageTargetLevel = CoreWebView2MemoryUsageTargetLevel.Low;
+                }
+                if (suspendTimer != null)
+                {
+                    suspendTimer.Stop();
+                    suspendTimer.Start();
+                }
+            }
+            catch { }
+        }
+
+        private static async Task SuspendWebViewIfHiddenAsync()
+        {
+            try
+            {
+                if (mainForm == null || mainForm.IsDisposed || webView == null || webView.CoreWebView2 == null) return;
+                bool isHiddenOrMinimized = !mainForm.Visible || mainForm.WindowState == FormWindowState.Minimized;
+                if (!isHiddenOrMinimized || isWebViewSuspended) return;
+
+                webView.Visible = false;
+                webView.CoreWebView2.MemoryUsageTargetLevel = CoreWebView2MemoryUsageTargetLevel.Low;
+                bool ok = await webView.CoreWebView2.TrySuspendAsync();
+                if (ok)
+                {
+                    isWebViewSuspended = true;
+                }
+                else if (mainForm.Visible && mainForm.WindowState != FormWindowState.Minimized)
+                {
+                    webView.Visible = true;
+                }
+            }
+            catch { }
+        }
+
+        private static void ResumeWebView()
+        {
+            try
+            {
+                if (suspendTimer != null) suspendTimer.Stop();
+                if (webView != null)
+                {
+                    if (!webView.Visible) webView.Visible = true;
+                    if (webView.CoreWebView2 != null)
+                    {
+                        webView.CoreWebView2.MemoryUsageTargetLevel = CoreWebView2MemoryUsageTargetLevel.Normal;
+                        if (isWebViewSuspended)
+                        {
+                            webView.CoreWebView2.Resume();
+                            isWebViewSuspended = false;
+                        }
+                    }
+                }
+            }
+            catch { }
         }
 
         private static async Task InitWebViewAsync()
@@ -275,6 +359,7 @@ namespace PersonalAssistantDesktop
         private static void ShowMainWindow()
         {
             if (mainForm == null || mainForm.IsDisposed) return;
+            ResumeWebView();
             if (!mainForm.Visible) mainForm.Show();
             if (mainForm.WindowState == FormWindowState.Minimized)
             {
@@ -325,7 +410,7 @@ namespace PersonalAssistantDesktop
                 ShowMainWindow();
             };
 
-            pollTimer = new System.Windows.Forms.Timer { Interval = 5000 };
+            pollTimer = new System.Windows.Forms.Timer { Interval = 15000 };
             pollTimer.Tick += async (s, e) =>
             {
                 if (isPolling) return;
