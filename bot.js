@@ -2232,7 +2232,10 @@ async function checkRepoUpdates() {
     const latestMsg = behind > 0 ? runGitSync(['log', '-1', '--pretty=%s', 'origin/main'], 4000) : '';
     const changedFiles =
       behind > 0
-        ? runGitSync(['diff', '--name-only', 'HEAD..origin/main'], 4000).split(/\r?\n/).filter(Boolean)
+        ? runGitSync(['-c', 'core.quotepath=false', 'diff', '--name-only', 'HEAD..origin/main'], 4000)
+            .split(/\r?\n/)
+            .map((f) => f.trim().replace(/^"|"$/g, ''))
+            .filter(Boolean)
         : [];
     const needsExeRestart = changedFiles.some((f) => /\.(exe|dll)$/i.test(f));
     return {
@@ -2303,8 +2306,12 @@ async function applyRepoUpdate() {
       };
     }
 
-    const changedFiles = runGitSync(['diff', '--name-only', 'HEAD..origin/main'], 4000)
+    const changedFiles = runGitSync(
+      ['-c', 'core.quotepath=false', 'diff', '--name-only', 'HEAD..origin/main'],
+      4000
+    )
       .split(/\r?\n/)
+      .map((f) => f.trim().replace(/^"|"$/g, ''))
       .filter(Boolean);
     const hasBinaryChanges = changedFiles.some((f) => /\.(exe|dll)$/i.test(f));
 
@@ -2319,7 +2326,11 @@ async function applyRepoUpdate() {
         '  $oldPid = (Get-Content $pidFile -ErrorAction SilentlyContinue | Select-Object -First 1).Trim()',
         '  if ($oldPid) { Stop-Process -Id ([int]$oldPid) -Force -ErrorAction SilentlyContinue }',
         '}',
-        'Start-Sleep -Milliseconds 600',
+        'for ($i = 0; $i -lt 15; $i++) {',
+        '  if (-not (Get-Process -Name "Помощник" -ErrorAction SilentlyContinue)) { break }',
+        '  Start-Sleep -Milliseconds 300',
+        '}',
+        'Start-Sleep -Milliseconds 400',
         'Set-Location (Join-Path $PSScriptRoot "..")',
         '$env:GCM_INTERACTIVE = "never"',
         '$env:GIT_TERMINAL_PROMPT = "0"',
