@@ -141,6 +141,9 @@ const DEFAULT_SETTINGS = {
   last_evening_habits_date: '',
   sound_enabled: '1',
   fx_enabled: '1',
+  user_profile: '',
+  profile_config_json: '',
+  custom_themes_json: '',
   bot_token: '',
   gemini_api_key: '',
 };
@@ -797,7 +800,7 @@ function addPlan({
   const type = list_type === 'global' || list_type === 'simple' ? 'global' : 'dated';
   const pDate = type === 'dated' ? plan_date || toDateStr() : '';
   const rTime = type === 'dated' ? normalizeTime(remind_time) : '';
-  const cleanCat = type === 'global' ? String(category || '').trim() : '';
+  const cleanCat = String(category || '').trim();
   const prio = is_priority ? 1 : 0;
 
   const info = db
@@ -898,6 +901,7 @@ function takeGlobalPlanToToday(id, todayStr = toDateStr()) {
     list_type: 'dated',
     plan_date: todayStr,
     remind_time: '',
+    category: g.category || '',
   });
 }
 

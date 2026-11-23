@@ -56,7 +56,7 @@
           </div>
           <div class="anime-meta">
             <span class="anime-name" id="sideSkinName">Готика · Черепа</span>
-            <span class="anime-chip">✦ 16 тем</span>
+            <span class="anime-chip">✦ 25 тем</span>
           </div>
         </div>
 
@@ -84,9 +84,10 @@
         </nav>
       </div>
 
-      <div class="side-foot">
+      <div class="side-foot" style="flex-wrap:wrap; gap:4px;">
         <button type="button" class="status-dot-btn" id="btnSecurityPill">○ Без PIN</button>
-        <button type="button" class="status-dot-btn" id="btnOpenSettingsSide">⚙ Настройки</button>
+        <button type="button" class="status-dot-btn" id="btnOpenProfileSide">✦ Разделы</button>
+        <button type="button" class="status-dot-btn" id="btnOpenSettingsSide">⚙</button>
       </div>
     </aside>
 
@@ -178,9 +179,9 @@
       <section class="view-pane active" id="view-overview">
         <div class="bento-grid">
           <div class="bento-col">
-            <div class="card">
+            <div class="card" id="ovDailyCard">
               <div class="card-head">
-                <span class="card-title">Дневные задания</span>
+                <span class="card-title" id="ovDailyCardTitle">Дневные задания</span>
                 <div class="card-head-right">
                   <span class="card-meta" id="ovDailyMeta"></span>
                   <button type="button" class="btn-link" data-jump-view="daily">Все дни →</button>
@@ -190,14 +191,17 @@
               <div id="ovDailyList"></div>
               <form class="inline-add" id="ovDailyForm">
                 <input type="text" id="ovDailyInput" class="input" placeholder="+ Новое задание на сегодня..." autocomplete="off" />
-                <input type="time" id="ovDailyTime" class="input" style="width:98px; flex:0 0 98px;" title="Время напоминания" />
+                <select id="ovDailyCategory" class="input" style="width:110px; flex:0 0 110px;" title="Категория">
+                  <option value="">Без рубрики</option>
+                </select>
+                <input type="time" id="ovDailyTime" class="input" style="width:92px; flex:0 0 92px;" title="Время напоминания" />
                 <button type="submit" class="btn btn-primary" style="flex:0 0 auto; padding:6px 12px;">+</button>
               </form>
             </div>
 
-            <div class="card">
+            <div class="card" id="ovGoalsCard">
               <div class="card-head">
-                <span class="card-title">Общие планы</span>
+                <span class="card-title" id="ovGoalsCardTitle">Общие планы</span>
                 <div class="card-head-right">
                   <button type="button" class="btn-link" data-jump-view="goals">Все планы →</button>
                 </div>
@@ -207,9 +211,9 @@
           </div>
 
           <div class="bento-col">
-            <div class="card">
+            <div class="card" id="ovHabitsCard">
               <div class="card-head">
-                <span class="card-title">База привычек</span>
+                <span class="card-title" id="ovHabitsCardTitle">База привычек</span>
                 <div class="card-head-right">
                   <span class="card-meta" id="ovHabitsMeta"></span>
                   <button type="button" class="btn-link" data-jump-view="habits">14 дней →</button>
@@ -218,9 +222,9 @@
               <div id="ovHabitsWrap"></div>
             </div>
 
-            <div class="card">
+            <div class="card" id="ovBooksCard">
               <div class="card-head">
-                <span class="card-title">Книги</span>
+                <span class="card-title" id="ovBooksCardTitle">Книги</span>
                 <div class="card-head-right">
                   <button type="button" class="btn-link" data-jump-view="books">Открыть базу →</button>
                 </div>
@@ -239,11 +243,18 @@
             <span class="card-meta">Нажмите 📅 на задаче, чтобы добавить её в Календарь iPhone</span>
           </div>
           <form class="form-box form-row" id="dailyAddForm">
-            <input type="text" id="dailyTitle" class="input" placeholder="Что нужно сделать..." required style="flex:2 1 200px;" />
-            <input type="date" id="dailyDate" class="input" style="flex:0 1 150px;" />
-            <input type="time" id="dailyTime" class="input" style="flex:0 1 115px;" />
+            <input type="text" id="dailyTitle" class="input" placeholder="Что нужно сделать..." required style="flex:2 1 180px;" />
+            <select id="dailyCategory" class="input" style="flex:0 1 135px;">
+              <option value="">Без категории</option>
+            </select>
+            <input type="date" id="dailyDate" class="input" style="flex:0 1 145px;" />
+            <input type="time" id="dailyTime" class="input" style="flex:0 1 110px;" />
             <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">Добавить</button>
           </form>
+        </div>
+        <div class="section-bar">
+          <div class="pill-group" id="dailyFiltersBar"></div>
+          <button type="button" class="btn btn-ghost" data-open-studio-tab="profile">✎ Категории</button>
         </div>
         <div id="dailyOverdueSection"></div>
         <div id="dailyGroupsSection"></div>
@@ -260,7 +271,10 @@
             <button type="button" class="seg-pill" data-gf="Личное">Личное</button>
             <button type="button" class="seg-pill" data-gf="done">Закрытые</button>
           </div>
-          <button type="button" class="btn btn-ghost" id="btnClearDoneGoals" style="display:none;">Очистить закрытые</button>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button type="button" class="btn btn-ghost" data-open-studio-tab="profile">✎ Категории</button>
+            <button type="button" class="btn btn-ghost" id="btnClearDoneGoals" style="display:none;">Очистить закрытые</button>
+          </div>
         </div>
 
         <div class="card card-mb">
@@ -390,23 +404,184 @@
   <div class="studio-backdrop" id="studioModal">
     <div class="studio-sheet">
       <div class="studio-top">
-        <div class="studio-tabs">
-          <button type="button" class="seg-pill active" id="stTabBtnThemes">✦ 16 тем</button>
-          <button type="button" class="seg-pill" id="stTabBtnSettings">⚙ Защита и настройки</button>
+        <div class="studio-tabs" style="flex-wrap:wrap;">
+          <button type="button" class="seg-pill active" id="stTabBtnThemes">✦ Темы</button>
+          <button type="button" class="seg-pill" id="stTabBtnProfile">⚡ Разделы</button>
+          <button type="button" class="seg-pill" id="stTabBtnSettings">⚙ Защита</button>
         </div>
         <span class="studio-toast" id="studioToast">● Сохранено</span>
         <button type="button" class="btn btn-ghost" id="btnCloseStudio">✕</button>
       </div>
 
       <div class="studio-body" id="studioPaneThemes">
-        <div class="pill-group" id="skinFilterBar">
-          <button type="button" class="seg-pill active" data-sc="all">Все (16)</button>
-          <button type="button" class="seg-pill" data-sc="anime">Аниме</button>
-          <button type="button" class="seg-pill" data-sc="games">Игры</button>
-          <button type="button" class="seg-pill" data-sc="dark">Тёмные</button>
-          <button type="button" class="seg-pill" data-sc="light">Светлые</button>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+          <div class="pill-group" id="skinFilterBar">
+            <button type="button" class="seg-pill active" data-sc="all" id="btnFilterAllSkins">Все (25)</button>
+            <button type="button" class="seg-pill" data-sc="anime">Аниме</button>
+            <button type="button" class="seg-pill" data-sc="games">Игры</button>
+            <button type="button" class="seg-pill" data-sc="dark">Тёмные</button>
+            <button type="button" class="seg-pill" data-sc="light">Светлые</button>
+            <button type="button" class="seg-pill" data-sc="custom">Свои</button>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary" id="btnOpenThemeBuilder">+ Создать тему</button>
+            <button type="button" class="btn btn-ghost" id="btnResetDefaultSkins" style="display:none;">↺ Сбросить стандартные</button>
+          </div>
         </div>
+
+        <!-- КОНСТРУКТОР ТЕМЫ IPHONE 3.0 -->
+        <div class="theme-builder-box" id="themeBuilderBox">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span class="card-title" id="tbHeading">Новая тема оформления</span>
+            <button type="button" class="btn btn-ghost" id="btnCloseThemeBuilder">×</button>
+          </div>
+          <input type="hidden" id="tbEditId" value="" />
+          <div class="form-row">
+            <input type="text" id="tbName" class="input" placeholder="Название темы (например: Киберпанк · Неон)" />
+            <input type="text" id="tbSub" class="input" placeholder="Подзаголовок или имя героя" />
+          </div>
+          <div class="form-row">
+            <select id="tbPresetImg" class="input">
+              <option value="">Свой загруженный арт / Без арта</option>
+              <option value="./assets/gallery/art-02.jpg">Арт 1 · Готика · Черепа</option>
+              <option value="./assets/gallery/art-10.png">Арт 2 · Эллен Джо · ZZZ</option>
+              <option value="./assets/gallery/art-05.jpg">Арт 3 · Юмэко · Азарт</option>
+              <option value="./assets/gallery/art-15.jpg">Арт 4 · Сакура и Тушь (Террорблейд)</option>
+              <option value="./assets/gallery/art-16.jpg">Арт 5 · Вергилий · Ямато</option>
+              <option value="./assets/gallery/art-03.jpg">Арт 6 · C.C. · Код Гиас</option>
+              <option value="./assets/gallery/art-17.png">Арт 7 · Чёрные перья</option>
+              <option value="./assets/gallery/art-13.png">Арт 8 · Кибер-рейв · Неон</option>
+              <option value="./assets/gallery/art-18.png">Арт 9 · Шоколадный Неко</option>
+              <option value="./assets/gallery/art-09.jpg">Арт 10 · Розовый Демон</option>
+              <option value="./assets/gallery/art-11.png">Арт 11 · Ночная Неко</option>
+              <option value="./assets/gallery/art-14.png">Арт 12 · Розовый Покер</option>
+              <option value="./assets/gallery/art-06.jpg">Арт 13 · Марстон · Вестерн</option>
+              <option value="./assets/gallery/art-08.jpg">Арт 14 · Мехагенда · CRT</option>
+              <option value="./assets/gallery/art-01.jpg">Арт 15 · Джокер · Нуар</option>
+              <option value="./assets/gallery/art-19.jpg">Арт 16 · Мику · Чилл-комната</option>
+              <option value="./assets/gallery/art-20.jpg">Арт 17 · Белый Шёлк · Сакура</option>
+              <option value="./assets/gallery/art-21.jpg">Арт 18 · Боччи · Рок-драйв</option>
+              <option value="./assets/gallery/art-22.jpg">Арт 19 · Полночь · Тихий час</option>
+              <option value="./assets/gallery/art-23.jpg">Арт 20 · Неко · Сапфир и Янтарь</option>
+              <option value="./assets/gallery/art-24.jpg">Арт 21 · Ризе · Пурпурный Туман</option>
+              <option value="./assets/gallery/art-25.jpg">Арт 22 · Коломбина · Лунный Сад</option>
+              <option value="./assets/gallery/art-26.jpg">Арт 23 · Утренний Кофе · Акварель</option>
+              <option value="./assets/gallery/art-27.jpg">Арт 24 · Зимний Вечер · Снегопад</option>
+            </select>
+            <label class="btn" style="cursor:pointer; flex:0 0 auto;">
+              📁 Свой фон
+              <input type="file" id="tbBgFile" accept="image/*" style="display:none;" />
+            </label>
+            <button type="button" class="btn btn-ghost" id="btnClearTbBg">Без фона</button>
+          </div>
+          <div class="form-row">
+            <div style="display:flex; align-items:center; gap:8px; flex:1 1 150px;">
+              <span style="font-size:12px; color:var(--text-muted);">Акцент:</span>
+              <input type="color" id="tbAccent" value="#e11d74" style="width:38px; height:32px; border:none; background:transparent; cursor:pointer;" />
+              <span id="tbBgStatus" style="font-size:11.5px; color:var(--text-muted);">Автоподбор</span>
+            </div>
+            <select id="tbMode" class="input" style="flex:0 1 145px;">
+              <option value="dark">Тёмное стекло</option>
+              <option value="light">Светлое стекло</option>
+            </select>
+            <select id="tbParticles" class="input" style="flex:0 1 155px;">
+              <option value="auto">Частицы: Авто</option>
+              <option value="sakura">Лепестки сакуры</option>
+              <option value="sparks">Неоновые искры</option>
+              <option value="dust">Мягкие пылинки</option>
+              <option value="snow">Снежинки</option>
+              <option value="off">Без частиц</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <select id="tbChibiKey" class="input">
+              <option value="rize-purple-mist">Персонаж: Ризе · Пурпурный Туман</option>
+              <option value="columbina-moon">Персонаж: Коломбина · Лунный Сад</option>
+              <option value="miku-morning-coffee">Персонаж: Утренний Кофе · Акварель</option>
+              <option value="winter-snow-miku">Персонаж: Зимний Вечер · Снегопад</option>
+              <option value="miku-chill-room">Персонаж: Мику · Чилл-комната</option>
+              <option value="white-sakura-ruby">Персонаж: Белый Шёлк · Сакура</option>
+              <option value="bocchi-rock">Персонаж: Боччи · Рок-драйв</option>
+              <option value="midnight-miku-lofi">Персонаж: Полночь · Тихий час</option>
+              <option value="neko-heterochromia">Персонаж: Неко · Сапфир и Янтарь</option>
+              <option value="joker-noir">Персонаж: Джокер · Нуар</option>
+              <option value="terrorblade-sakura">Персонаж: Террорблейд · Сакура</option>
+              <option value="vergil-yamato">Персонаж: Вергилий · Ямато</option>
+              <option value="ellen-zzz">Персонаж: Эллен Джо · ZZZ</option>
+              <option value="yumeko-kakegurui">Персонаж: Юмэко · Азарт</option>
+              <option value="cc-code-geass">Персонаж: C.C. · Код Гиас</option>
+              <option value="chocola-maid">Персонаж: Шоколадный Неко</option>
+              <option value="cyber-rave-miku">Персонаж: Кибер-рейв · Неон</option>
+              <option value="gothic-miku-feathers">Персонаж: Чёрные перья</option>
+              <option value="goth-skull">Персонаж: Готика · Черепа</option>
+              <option value="pink-demon-lolita">Персонаж: Розовый Демон</option>
+              <option value="night-neko-stripes">Персонаж: Ночная Неко</option>
+              <option value="marston-acid-western">Персонаж: Марстон · Вестерн</option>
+              <option value="mechagenda-biomech">Персонаж: Мехагенда · CRT</option>
+              <option value="pink-poker-cards">Персонаж: Розовый Покер</option>
+              <option value="strict-minimal">Персонаж: Минимализм</option>
+            </select>
+            <label class="btn" style="cursor:pointer; flex:0 0 auto;">
+              📁 Свой аватар
+              <input type="file" id="tbAvatarFile" accept="image/*" style="display:none;" />
+            </label>
+            <button type="button" class="btn btn-ghost" id="btnClearTbAvatar" style="display:none;">Сбросить аватар</button>
+          </div>
+          <textarea id="tbQuotes" class="input" style="min-height:62px;" placeholder="Свои фразы персонажа (каждая с новой строки, необязательно)"></textarea>
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" class="btn" id="btnCancelThemeBuilder">Отмена</button>
+            <button type="button" class="btn btn-primary" id="btnSaveThemeBuilder">Сохранить тему</button>
+          </div>
+        </div>
+
         <div class="skins-grid" id="skinsGrid"></div>
+      </div>
+
+      <!-- ВКЛАДКА 2 (IPHONE 3.0): ПРОФИЛИ, СВОИ КАТЕГОРИИ И РАЗДЕЛЫ -->
+      <div class="studio-body" id="studioPaneProfile" style="display:none;">
+        <div class="tweak-bar">
+          <div>
+            <span class="tweak-label">Готовый профиль под ваш ритм жизни</span>
+            <span class="tweak-sub">Переключает названия разделов и набор категорий (все ваши записи остаются на месте)</span>
+          </div>
+          <div class="profile-preset-grid" id="profilePresetsGrid">
+            <button type="button" class="profile-preset-card" data-preset="study">
+              <span class="profile-preset-title">🎓 Учёба</span>
+              <span class="profile-preset-sub">Дневные задания, домашка, учебные проекты, привычки и книги</span>
+            </button>
+            <button type="button" class="profile-preset-card" data-preset="work">
+              <span class="profile-preset-title">💼 Работа и проекты</span>
+              <span class="profile-preset-sub">Рабочие задачи по дням, проекты, клиенты, привычки и материалы</span>
+            </button>
+            <button type="button" class="profile-preset-card" data-preset="custom">
+              <span class="profile-preset-title">⚡ Свободный режим</span>
+              <span class="profile-preset-sub">Универсальный набор: работа, проекты, спорт, личное</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="tweak-bar">
+          <div>
+            <span class="tweak-label">Свои категории (для задач и общих планов)</span>
+            <span class="tweak-sub">Создавайте свои категории (например: «Работа», «Фриланс», «Спорт»), переименовывайте или удаляйте</span>
+          </div>
+          <div class="cat-chip-list" id="customCategoriesList"></div>
+          <form class="form-row" id="addCustomCategoryForm">
+            <input type="text" id="newCategoryInput" class="input" placeholder="Новая категория (например: Работа, Клиенты, Спорт)..." />
+            <button type="submit" class="btn btn-primary" style="flex:0 0 auto;">+ Добавить</button>
+          </form>
+        </div>
+
+        <div class="tweak-bar">
+          <div>
+            <span class="tweak-label">Настройка разделов приложения</span>
+            <span class="tweak-sub">Любой раздел можно переименовать под себя (например: «Книги» → «Фильмы и игры») или скрыть</span>
+          </div>
+          <div id="sectionsConfigList"></div>
+          <div style="display:flex; justify-content:flex-end;">
+            <button type="button" class="btn btn-primary" id="btnSaveSectionsCfg">Сохранить разделы</button>
+          </div>
+        </div>
       </div>
 
       <div class="studio-body" id="studioPaneSettings" style="display:none;">

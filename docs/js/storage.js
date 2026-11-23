@@ -16,6 +16,9 @@
       fx_enabled: '1',
       auto_lock_sec: '60',
       last_backup_at: '',
+      user_profile: 'custom',
+      profile_config_json: '',
+      custom_themes_json: '',
     },
     plans: [],      // { id, title, list_type:'dated'|'global', plan_date, remind_time, category, is_priority, is_done, created_at }
     habits: [],     // { id, title, kind:'check'|'value', target_value, unit, days_mask, created_at }
@@ -432,6 +435,18 @@
     await persistNow();
   }
 
+  async function renameCategoryInPlans(oldName, newName) {
+    let changed = 0;
+    for (const p of dataCache.plans) {
+      if (p.category === oldName) {
+        p.category = newName;
+        changed++;
+      }
+    }
+    if (changed > 0) await persistNow();
+    return changed;
+  }
+
   async function clearDoneGlobals() {
     dataCache.plans = dataCache.plans.filter((p) => !(p.list_type === 'global' && p.is_done));
     await persistNow();
@@ -679,6 +694,7 @@
     moveAllOverdueToday,
     takeGoalToToday,
     deletePlan,
+    renameCategoryInPlans,
     clearDoneGlobals,
     addHabit,
     toggleHabit,

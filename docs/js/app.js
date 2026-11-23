@@ -2,7 +2,44 @@
 (function (global) {
   'use strict';
 
-  const { SKINS, getTimeSlot, getTimeGreeting, renderChibiMarkup } = global.HelpThemes;
+  const { DEFAULT_SKINS, CHIBI_THEMES, getTimeSlot, getTimeGreeting, renderChibiMarkup } = global.HelpThemes;
+  let SKINS = [...DEFAULT_SKINS];
+  let CUSTOM_THEMES_STATE = { customSkins: [], deletedIds: [] };
+
+  const PROFILE_PRESETS = {
+    study: {
+      id: 'study',
+      sections: {
+        daily:  { enabled: true, title: 'Дневные задания', navTitle: 'Дневные задания', mobTitle: 'Задания' },
+        goals:  { enabled: true, title: 'Общие планы',     navTitle: 'Общие планы',     mobTitle: 'Планы' },
+        habits: { enabled: true, title: 'База привычек',   navTitle: 'База привычек',   mobTitle: 'Привычки' },
+        books:  { enabled: true, title: 'Книги',           navTitle: 'Книги',           mobTitle: 'Книги' },
+      },
+      categories: ['Учёба', 'Домашка', 'Проекты', 'Личное'],
+    },
+    work: {
+      id: 'work',
+      sections: {
+        daily:  { enabled: true, title: 'Рабочие задачи',    navTitle: 'Рабочие задачи',  mobTitle: 'Задачи' },
+        goals:  { enabled: true, title: 'Проекты и цели',    navTitle: 'Проекты и цели',  mobTitle: 'Проекты' },
+        habits: { enabled: true, title: 'База привычек',     navTitle: 'База привычек',   mobTitle: 'Привычки' },
+        books:  { enabled: true, title: 'Книги и материалы', navTitle: 'Книги и база',    mobTitle: 'Книги' },
+      },
+      categories: ['Работа', 'Проекты', 'Клиенты', 'Личное'],
+    },
+    custom: {
+      id: 'custom',
+      sections: {
+        daily:  { enabled: true, title: 'Дневные задания', navTitle: 'Дневные задания', mobTitle: 'Задания' },
+        goals:  { enabled: true, title: 'Общие планы',     navTitle: 'Общие планы',     mobTitle: 'Планы' },
+        habits: { enabled: true, title: 'База привычек',   navTitle: 'База привычек',   mobTitle: 'Привычки' },
+        books:  { enabled: true, title: 'Книги',           navTitle: 'Книги',           mobTitle: 'Книги' },
+      },
+      categories: ['Работа', 'Проекты', 'Спорт', 'Личное'],
+    },
+  };
+
+  let PROFILE_CONFIG = JSON.parse(JSON.stringify(PROFILE_PRESETS.custom));
   const Storage = global.HelpStorage;
   const Crypto = global.HelpCrypto;
   const Calendar = global.HelpCalendar;
@@ -24,6 +61,7 @@
 
   let STATE = null;
   let activeView = 'overview';
+  let dailyFilter = 'all';
   let goalFilter = 'all';
   let bookFilter = 'all';
   let editingBookId = null;
@@ -264,7 +302,7 @@
     root.style.setProperty('--accent-soft', `rgba(${ar}, ${ag}, ${ab}, ${isDark ? 0.18 : 0.12})`);
     const accentLuma = 0.299 * ar + 0.587 * ag + 0.114 * ab;
     root.style.setProperty('--accent-ink', accentLuma > 180 ? '#111114' : '#ffffff');
-    const bgAbsUrl = skin.img ? new URL(skin.img, window.location.href).href : '';
+    const bgAbsUrl = !skin.img ? '' : (skin.img.startsWith('data:') || skin.img.startsWith('http')) ? skin.img : new URL(skin.img, window.location.href).href;
     root.style.setProperty('--wallpaper-url', bgAbsUrl ? `url('${bgAbsUrl}')` : 'none');
     root.style.setProperty('--wallpaper-pos', skin.cropPos || '50% 20%');
     root.style.setProperty('--wallpaper-opacity', bgAbsUrl ? (isDark ? '0.26' : '0.18') : '0');
@@ -281,7 +319,7 @@
   function renderLockAvatar() {
     const el = document.getElementById('lockAvatar');
     if (!el) return;
-    el.innerHTML = renderChibiMarkup(getCurrentSkin().id, 'normal');
+    el.innerHTML = renderChibiMarkup(getCurrentSkin(), 'normal');
   }
 
   function renderHeroArt() {
@@ -322,7 +360,7 @@
     if (chibiWrap) {
       chibiWrap.classList.toggle('happy', mood === 'happy');
       chibiWrap.classList.toggle('sleepy', mood === 'sleepy');
-      chibiWrap.innerHTML = renderChibiMarkup(skin.id, mood);
+      chibiWrap.innerHTML = renderChibiMarkup(skin, mood);
     }
 
     const quotes = skin.quotes || [];
@@ -731,6 +769,7 @@
             </div>
           </div>
           <div class="row-right">
+            ${p.category ? `<span class="badge">${escapeHtml(p.category)}</span>` : ''}
             ${p.remind_time ? `<span class="time-col">${escapeHtml(p.remind_time)}</span>` : ''}
             ${!p.is_done ? `<button type="button" class="btn btn-ghost" data-action="cal-task" data-id="${p.id}" title="Добавить в Календарь iPhone">📅</button>` : ''}
             ${!p.is_done ? `<button type="button" class="btn btn-ghost" data-action="focus-task" data-id="${p.id}" title="Фокус 25 мин">⏱</button>` : ''}
@@ -858,10 +897,13 @@
         </div>`;
     }
 
-    const upcoming = STATE.upcomingPlans;
+    const rawUpcoming = STATE.upcomingPlans;
+    const upcoming = dailyFilter && dailyFilter !== 'all'
+      ? rawUpcoming.filter((p) => (p.category || '') === dailyFilter)
+      : rawUpcoming;
     const groupsWrap = document.getElementById('dailyGroupsSection');
     if (upcoming.length === 0) {
-      groupsWrap.innerHTML = '<div class="card"><div class="empty-line">Заданий на сегодня и ближайшие дни пока нет</div></div>';
+      groupsWrap.innerHTML = `<div class="card"><div class="empty-line">${dailyFilter !== 'all' ? 'В этой категории заданий пока нет' : 'Заданий на сегодня и ближайшие дни пока нет'}</div></div>`;
       return;
     }
 
@@ -893,6 +935,7 @@
                   </div>
                 </div>
                 <div class="row-right">
+                  ${p.category ? `<span class="badge accent">${escapeHtml(p.category)}</span>` : ''}
                   ${p.remind_time ? `<span class="badge">${escapeHtml(p.remind_time)}</span>` : ''}
                   ${!p.is_done ? `<button type="button" class="btn btn-ghost" data-action="cal-task" data-id="${p.id}" title="В Календарь iPhone">📅</button>` : ''}
                   ${!p.is_done ? `<button type="button" class="btn btn-ghost" data-action="focus-task" data-id="${p.id}" title="Фокус 25 мин">⏱</button>` : ''}
@@ -912,7 +955,7 @@
     let list = all;
     if (goalFilter === 'priority') list = all.filter((g) => g.is_priority && !g.is_done);
     else if (goalFilter === 'done') list = all.filter((g) => g.is_done);
-    else if (['Учёба', 'Проекты', 'Личное'].includes(goalFilter)) list = all.filter((g) => g.category === goalFilter && !g.is_done);
+    else if (goalFilter && goalFilter !== 'all') list = all.filter((g) => g.category === goalFilter && !g.is_done);
 
     const wrap = document.getElementById('goalsListWrap');
     if (list.length === 0) {
@@ -1037,6 +1080,7 @@
     document.getElementById('studioModal').classList.add('open');
     switchStudioTab(tab);
     renderStudioThemes();
+    renderStudioProfilePane();
     renderStudioSettingsState();
   }
 
@@ -1045,11 +1089,13 @@
   }
 
   function switchStudioTab(tab) {
-    const isThemes = tab === 'themes';
-    document.getElementById('stTabBtnThemes').classList.toggle('active', isThemes);
-    document.getElementById('stTabBtnSettings').classList.toggle('active', !isThemes);
-    document.getElementById('studioPaneThemes').style.display = isThemes ? 'flex' : 'none';
-    document.getElementById('studioPaneSettings').style.display = isThemes ? 'none' : 'flex';
+    document.getElementById('stTabBtnThemes')?.classList.toggle('active', tab === 'themes');
+    document.getElementById('stTabBtnProfile')?.classList.toggle('active', tab === 'profile');
+    document.getElementById('stTabBtnSettings')?.classList.toggle('active', tab === 'settings');
+    document.getElementById('studioPaneThemes').style.display = tab === 'themes' ? 'flex' : 'none';
+    document.getElementById('studioPaneProfile').style.display = tab === 'profile' ? 'flex' : 'none';
+    document.getElementById('studioPaneSettings').style.display = tab === 'settings' ? 'flex' : 'none';
+    if (tab === 'profile') renderStudioProfilePane();
   }
 
   function flashStudioToast(msg = '● Сохранено') {
@@ -1075,16 +1121,44 @@
   function renderStudioThemes() {
     const grid = document.getElementById('skinsGrid');
     if (!grid) return;
+    const allBtn = document.getElementById('btnFilterAllSkins');
+    if (allBtn) allBtn.textContent = `Все (${SKINS.length})`;
+    const chipEl = document.querySelector('.anime-chip');
+    if (chipEl) chipEl.textContent = `✦ ${SKINS.length} тем`;
+
+    const hasMod =
+      (CUSTOM_THEMES_STATE.deletedIds && CUSTOM_THEMES_STATE.deletedIds.length > 0) ||
+      (CUSTOM_THEMES_STATE.customSkins && CUSTOM_THEMES_STATE.customSkins.some((cs) => DEFAULT_SKINS.some((ds) => ds.id === cs.id)));
+    const rstBtn = document.getElementById('btnResetDefaultSkins');
+    if (rstBtn) rstBtn.style.display = hasMod ? 'inline-flex' : 'none';
+
     document.querySelectorAll('#skinFilterBar .seg-pill').forEach((b) => {
       b.classList.toggle('active', b.getAttribute('data-sc') === UI_PREFS.filterCat);
     });
-    const list = UI_PREFS.filterCat === 'all' ? SKINS : SKINS.filter((s) => s.category.includes(UI_PREFS.filterCat));
+    const list =
+      UI_PREFS.filterCat === 'all'
+        ? SKINS
+        : UI_PREFS.filterCat === 'custom'
+        ? SKINS.filter((s) => s.isCustom || (CUSTOM_THEMES_STATE.customSkins || []).some((cs) => cs.id === s.id))
+        : SKINS.filter((s) => (s.category || []).includes(UI_PREFS.filterCat));
+
+    if (list.length === 0) {
+      grid.innerHTML = '<div class="empty-line" style="grid-column:1/-1;">В этой категории пока нет тем — нажмите «+ Создать тему»</div>';
+      return;
+    }
+
     grid.innerHTML = list
       .map((s) => {
         const thumb = s.img ? `<img src="${s.img}" alt="${escapeHtml(s.name)}" style="object-position:${s.cropPos || '50% 20%'};" loading="lazy" />` : '<span>Без арта</span>';
         return `
-          <div class="skin-card ${s.id === UI_PREFS.skinId ? 'active' : ''}" data-select-skin="${s.id}">
-            <div class="skin-thumb">${thumb}</div>
+          <div class="skin-card ${s.id === UI_PREFS.skinId ? 'active' : ''}" data-select-skin="${escapeHtml(s.id)}">
+            <div class="skin-thumb">
+              ${thumb}
+              <div class="skin-card-actions">
+                <button type="button" class="skin-act-btn" data-edit-skin="${escapeHtml(s.id)}" title="Изменить тему">✎</button>
+                ${SKINS.length > 1 ? `<button type="button" class="skin-act-btn" data-del-skin="${escapeHtml(s.id)}" title="Удалить тему">×</button>` : ''}
+              </div>
+            </div>
             <div class="skin-info">
               <div style="min-width:0;">
                 <div class="skin-name">${escapeHtml(s.name)}</div>
@@ -1231,10 +1305,12 @@
         if (!document.hidden && !document.body.classList.contains('no-fx') && !document.body.classList.contains('app-locked')) {
           const skin = getCurrentSkin();
           ctx.clearRect(0, 0, W, H);
-          if (skin.id !== 'strict-minimal') {
-            const isSakura = skin.id === 'terrorblade-sakura' || skin.id === 'chocola-maid';
-            const isSpark = ['ellen-zzz', 'cyber-rave-miku', 'gothic-miku-feathers', 'vergil-yamato', 'pink-poker-cards', 'cc-code-geass'].includes(skin.id);
-            ctx.fillStyle = skin.colors.pink || '#e11d74';
+          const pType = skin.particleType || 'auto';
+          if (skin.id !== 'strict-minimal' && pType !== 'off') {
+            const isSakura = pType === 'sakura' || (pType === 'auto' && (skin.id === 'terrorblade-sakura' || skin.id === 'chocola-maid'));
+            const isSpark = pType === 'sparks' || (pType === 'auto' && ['ellen-zzz', 'cyber-rave-miku', 'gothic-miku-feathers', 'vergil-yamato', 'pink-poker-cards', 'cc-code-geass'].includes(skin.id));
+            const isSnow = pType === 'snow';
+            ctx.fillStyle = isSnow ? '#ffffff' : (skin.colors.pink || '#e11d74');
             for (const p of parts) {
               p.y += isSpark ? -p.vy * 0.75 : p.vy;
               p.x += p.vx + Math.sin(p.y * 0.012) * 0.16;
@@ -1270,6 +1346,432 @@
     requestAnimationFrame(frame);
   }
 
+
+  // ===== ВЕРСИЯ 3.0: ИСКРЫ, КОНСТРУКТОР ТЕМ, ПРОФИЛИ И СВОИ КАТЕГОРИИ =====
+  let lastPointerXY = { x: 200, y: 400 };
+  global.addEventListener('pointerdown', (e) => {
+    if (e && typeof e.clientX === 'number') {
+      lastPointerXY = { x: e.clientX, y: e.clientY };
+    }
+  }, { passive: true });
+
+  function spawnCompletionSparks(originEl = null) {
+    if (document.body.classList.contains('no-fx')) return;
+    let cx = lastPointerXY.x || (global.innerWidth || 390) / 2;
+    let cy = lastPointerXY.y || (global.innerHeight || 844) / 2;
+    if (originEl && originEl.getBoundingClientRect) {
+      const r = originEl.getBoundingClientRect();
+      cx = r.left + r.width / 2;
+      cy = r.top + r.height / 2;
+    }
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'spark-burst-dot';
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.35;
+      const dist = 18 + Math.random() * 20;
+      dot.style.left = `${cx - 3}px`;
+      dot.style.top = `${cy - 3}px`;
+      dot.style.setProperty('--dx', `${(Math.cos(angle) * dist).toFixed(1)}px`);
+      dot.style.setProperty('--dy', `${(Math.sin(angle) * dist).toFixed(1)}px`);
+      document.body.appendChild(dot);
+      setTimeout(() => dot.remove(), 550);
+    }
+  }
+
+  function rebuildEffectiveSkins() {
+    const deleted = new Set(CUSTOM_THEMES_STATE.deletedIds || []);
+    const customMap = new Map((CUSTOM_THEMES_STATE.customSkins || []).map((s) => [s.id, s]));
+    const merged = [];
+    for (const cs of CUSTOM_THEMES_STATE.customSkins || []) {
+      if (!DEFAULT_SKINS.some((ds) => ds.id === cs.id) && !deleted.has(cs.id)) {
+        merged.push({ ...cs, isCustom: true });
+      }
+    }
+    for (const ds of DEFAULT_SKINS) {
+      if (deleted.has(ds.id)) continue;
+      if (customMap.has(ds.id)) {
+        merged.push({ ...ds, ...customMap.get(ds.id) });
+      } else {
+        merged.push(ds);
+      }
+    }
+    if (merged.length === 0) merged.push(DEFAULT_SKINS[0]);
+    SKINS = merged;
+    if (!SKINS.some((s) => s.id === UI_PREFS.skinId)) {
+      UI_PREFS.skinId = SKINS[0].id;
+    }
+  }
+
+  function loadCustomThemesLocal() {
+    try {
+      const raw = localStorage.getItem('helptool_ios_custom_themes_v3');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          CUSTOM_THEMES_STATE = {
+            customSkins: Array.isArray(parsed.customSkins) ? parsed.customSkins : [],
+            deletedIds: Array.isArray(parsed.deletedIds) ? parsed.deletedIds : [],
+          };
+        }
+      }
+    } catch {}
+    rebuildEffectiveSkins();
+  }
+
+  async function persistCustomThemes() {
+    const json = JSON.stringify(CUSTOM_THEMES_STATE);
+    try {
+      localStorage.setItem('helptool_ios_custom_themes_v3', json);
+    } catch {}
+    rebuildEffectiveSkins();
+    applyCurrentSkin();
+    if (STATE) {
+      await Storage.updateSetting('custom_themes_json', json);
+    }
+  }
+
+  let tbTempBgDataUrl = '';
+  let tbTempAvatarDataUrl = '';
+
+  function openThemeBuilder(editSkinId = '') {
+    const box = document.getElementById('themeBuilderBox');
+    if (!box) return;
+    box.classList.add('open');
+    const existing = editSkinId ? SKINS.find((s) => s.id === editSkinId) : null;
+    document.getElementById('tbHeading').textContent = existing ? `Изменить тему: ${existing.name}` : 'Создать свою тему';
+    document.getElementById('tbEditId').value = existing ? existing.id : '';
+    document.getElementById('tbName').value = existing ? existing.name : '';
+    document.getElementById('tbSub').value = existing ? existing.sub : '';
+    document.getElementById('tbAccent').value = (existing && existing.colors && existing.colors.pink) || '#e11d74';
+    document.getElementById('tbMode').value = (existing && existing.mode) || 'dark';
+    document.getElementById('tbParticles').value = (existing && existing.particleType) || 'auto';
+    document.getElementById('tbChibiKey').value = (existing && (existing.chibiKey || (CHIBI_THEMES[existing.id] ? existing.id : 'joker-noir'))) || 'joker-noir';
+    document.getElementById('tbQuotes').value = existing && Array.isArray(existing.quotes) ? existing.quotes.join('\n') : '';
+
+    const img = (existing && existing.img) || '';
+    const presetSel = document.getElementById('tbPresetImg');
+    if (img && img.startsWith('./assets/gallery/')) {
+      presetSel.value = img;
+      tbTempBgDataUrl = '';
+      document.getElementById('tbBgStatus').textContent = 'Арт из галереи';
+    } else if (img) {
+      presetSel.value = '';
+      tbTempBgDataUrl = img;
+      document.getElementById('tbBgStatus').textContent = 'Свой фон';
+    } else {
+      presetSel.value = '';
+      tbTempBgDataUrl = '';
+      document.getElementById('tbBgStatus').textContent = 'Без фона';
+    }
+    tbTempAvatarDataUrl = (existing && existing.customAvatar) || '';
+    document.getElementById('btnClearTbAvatar').style.display = tbTempAvatarDataUrl ? 'inline-flex' : 'none';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function closeThemeBuilder() {
+    document.getElementById('themeBuilderBox')?.classList.remove('open');
+  }
+
+  function compressImageFile(file, maxDim, quality, onDone) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        let bestHex = '';
+        try {
+          const sample = ctx.getImageData(0, 0, w, h).data;
+          let bestScore = -1;
+          const step = Math.max(4, Math.floor(sample.length / 4 / 400) * 4);
+          for (let i = 0; i < sample.length; i += step) {
+            const r = sample[i], g = sample[i + 1], b = sample[i + 2];
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            const sat = max === 0 ? 0 : (max - min) / max;
+            const luma = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            const score = sat * (1 - Math.abs(luma - 0.55));
+            if (score > bestScore && max > 60) {
+              bestScore = score;
+              bestHex = '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('');
+            }
+          }
+        } catch {}
+        onDone(canvas.toDataURL('image/jpeg', quality), bestHex);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function saveThemeBuilder() {
+    const editId = document.getElementById('tbEditId').value.trim();
+    const name = document.getElementById('tbName').value.trim() || 'Моя тема';
+    const sub = document.getElementById('tbSub').value.trim() || 'Свой стиль';
+    const accent = document.getElementById('tbAccent').value || '#e11d74';
+    const mode = document.getElementById('tbMode').value === 'light' ? 'light' : 'dark';
+    const particleType = document.getElementById('tbParticles').value || 'auto';
+    const chibiKey = document.getElementById('tbChibiKey').value || 'joker-noir';
+    const presetImg = document.getElementById('tbPresetImg').value;
+    const finalImg = tbTempBgDataUrl || presetImg || '';
+
+    const rawQuotes = document.getElementById('tbQuotes').value
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const baseRef = DEFAULT_SKINS.find((s) => s.id === (editId || chibiKey)) || DEFAULT_SKINS[0];
+    const quotes = rawQuotes.length > 0 ? rawQuotes : baseRef.quotes;
+
+    const colors = mode === 'dark'
+      ? { bg: '#0c0c12', surface: '#151520', text: '#f4f3f8', textMuted: '#9896ab', pink: accent, amber: accent }
+      : { bg: '#f6f5f9', surface: '#ffffff', text: '#15141b', textMuted: '#666375', pink: accent, amber: accent };
+
+    const id = editId || ('custom-' + Date.now());
+    const newSkin = {
+      id,
+      name,
+      sub,
+      category: ['custom', mode],
+      mode,
+      img: finalImg,
+      cropPos: '50% 20%',
+      colors,
+      particleType,
+      chibiKey,
+      customAvatar: tbTempAvatarDataUrl || '',
+      quotes,
+      isCustom: true,
+    };
+
+    const list = (CUSTOM_THEMES_STATE.customSkins || []).filter((s) => s.id !== id);
+    list.unshift(newSkin);
+    CUSTOM_THEMES_STATE.customSkins = list;
+    CUSTOM_THEMES_STATE.deletedIds = (CUSTOM_THEMES_STATE.deletedIds || []).filter((x) => x !== id);
+
+    UI_PREFS.skinId = id;
+    saveUiPrefs();
+    closeThemeBuilder();
+    await persistCustomThemes();
+    playUiSound('done');
+    flashStudioToast('● Тема сохранена и применена');
+  }
+
+  async function deleteThemeById(id) {
+    if (SKINS.length <= 1) return;
+    CUSTOM_THEMES_STATE.customSkins = (CUSTOM_THEMES_STATE.customSkins || []).filter((s) => s.id !== id);
+    if (DEFAULT_SKINS.some((ds) => ds.id === id)) {
+      if (!CUSTOM_THEMES_STATE.deletedIds.includes(id)) {
+        CUSTOM_THEMES_STATE.deletedIds.push(id);
+      }
+    }
+    await persistCustomThemes();
+    playUiSound('tap');
+    flashStudioToast('● Тема удалена');
+  }
+
+  async function resetDefaultThemes() {
+    CUSTOM_THEMES_STATE.deletedIds = [];
+    CUSTOM_THEMES_STATE.customSkins = (CUSTOM_THEMES_STATE.customSkins || []).filter(
+      (cs) => !DEFAULT_SKINS.some((ds) => ds.id === cs.id)
+    );
+    await persistCustomThemes();
+    playUiSound('done');
+    flashStudioToast('● Все 16 стандартных тем восстановлены');
+  }
+
+  function isSectionEnabled(secKey) {
+    if (secKey === 'overview') return true;
+    if (PROFILE_CONFIG && PROFILE_CONFIG.sections && PROFILE_CONFIG.sections[secKey]) {
+      return PROFILE_CONFIG.sections[secKey].enabled !== false;
+    }
+    return true;
+  }
+
+  function normalizeProfileConfig(raw) {
+    const basePreset = (raw && PROFILE_PRESETS[raw.id]) ? PROFILE_PRESETS[raw.id] : PROFILE_PRESETS.custom;
+    const base = JSON.parse(JSON.stringify(basePreset));
+    if (!raw || typeof raw !== 'object') return base;
+    base.id = raw.id || 'custom';
+    if (raw.sections && typeof raw.sections === 'object') {
+      for (const k of ['daily', 'goals', 'habits', 'books']) {
+        if (raw.sections[k]) {
+          base.sections[k] = {
+            ...base.sections[k],
+            ...raw.sections[k],
+            enabled: raw.sections[k].enabled !== false,
+          };
+        }
+      }
+    }
+    if (Array.isArray(raw.categories) && raw.categories.length > 0) {
+      base.categories = raw.categories.map((c) => String(c || '').trim()).filter(Boolean);
+    }
+    return base;
+  }
+
+  function loadProfileConfigLocal() {
+    try {
+      const raw = localStorage.getItem('helptool_ios_profile_cfg_v3');
+      if (raw) {
+        PROFILE_CONFIG = normalizeProfileConfig(JSON.parse(raw));
+        return;
+      }
+    } catch {}
+    PROFILE_CONFIG = normalizeProfileConfig(null);
+  }
+
+  async function persistProfileConfig() {
+    const json = JSON.stringify(PROFILE_CONFIG);
+    try {
+      localStorage.setItem('helptool_ios_profile_cfg_v3', json);
+    } catch {}
+    if (STATE) {
+      await Storage.updateSetting('user_profile', PROFILE_CONFIG.id || 'custom');
+      await Storage.updateSetting('profile_config_json', json);
+    }
+    applyProfileToDom();
+    refreshAndRender();
+  }
+
+  function applyProfileToDom() {
+    const secs = PROFILE_CONFIG.sections || PROFILE_PRESETS.custom.sections;
+    const cats = PROFILE_CONFIG.categories || ['Работа', 'Проекты', 'Спорт', 'Личное'];
+
+    VIEW_TITLES.daily = secs.daily?.title || 'Дневные задания';
+    VIEW_TITLES.goals = secs.goals?.title || 'Общие планы';
+    VIEW_TITLES.habits = secs.habits?.title || 'База привычек';
+    VIEW_TITLES.books = secs.books?.title || 'Книги';
+
+    const cardMap = {
+      daily:  { card: 'ovDailyCard',  title: 'ovDailyCardTitle' },
+      goals:  { card: 'ovGoalsCard',  title: 'ovGoalsCardTitle' },
+      habits: { card: 'ovHabitsCard', title: 'ovHabitsCardTitle' },
+      books:  { card: 'ovBooksCard',  title: 'ovBooksCardTitle' },
+    };
+    for (const [k, ids] of Object.entries(cardMap)) {
+      const on = isSectionEnabled(k);
+      document.getElementById(ids.card)?.classList.toggle('section-hidden', !on);
+      const tEl = document.getElementById(ids.title);
+      if (tEl && secs[k]) tEl.textContent = secs[k].title;
+    }
+
+    let visibleMobTabs = 1;
+    for (const k of ['daily', 'goals', 'habits', 'books']) {
+      const on = isSectionEnabled(k);
+      if (on) visibleMobTabs++;
+      const sideBtn = document.querySelector(`#sideNav .side-btn[data-view="${k}"]`);
+      if (sideBtn) {
+        sideBtn.classList.toggle('section-hidden', !on);
+        const sp = sideBtn.querySelector('span:first-child');
+        if (sp && secs[k]) sp.textContent = secs[k].navTitle || secs[k].title;
+      }
+      const mobBtn = document.querySelector(`#mobileNav .mob-nav-btn[data-view="${k}"]`);
+      if (mobBtn) {
+        mobBtn.classList.toggle('section-hidden', !on);
+        const spans = mobBtn.querySelectorAll('span');
+        if (spans[1] && secs[k]) spans[1].textContent = secs[k].mobTitle || secs[k].title;
+      }
+    }
+    const mobGrid = document.getElementById('mobileNav');
+    if (mobGrid) {
+      mobGrid.style.gridTemplateColumns = `repeat(${Math.max(1, visibleMobTabs)}, 1fr)`;
+    }
+
+    const catOptionsHtml = '<option value="">Без категории</option>' +
+      cats.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    for (const selId of ['goalCategory', 'dailyCategory', 'ovDailyCategory']) {
+      const sel = document.getElementById(selId);
+      if (sel) {
+        const prev = sel.value;
+        sel.innerHTML = catOptionsHtml;
+        if (cats.includes(prev)) sel.value = prev;
+      }
+    }
+
+    if (goalFilter !== 'all' && goalFilter !== 'priority' && goalFilter !== 'done' && !cats.includes(goalFilter)) {
+      goalFilter = 'all';
+    }
+    const goalBar = document.getElementById('goalFiltersBar');
+    if (goalBar) {
+      goalBar.innerHTML =
+        `<button type="button" class="seg-pill ${goalFilter === 'all' ? 'active' : ''}" data-gf="all">Все</button>` +
+        `<button type="button" class="seg-pill ${goalFilter === 'priority' ? 'active' : ''}" data-gf="priority">★ Важные</button>` +
+        cats.map((c) => `<button type="button" class="seg-pill ${goalFilter === c ? 'active' : ''}" data-gf="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('') +
+        `<button type="button" class="seg-pill ${goalFilter === 'done' ? 'active' : ''}" data-gf="done">Закрытые</button>`;
+    }
+
+    if (dailyFilter !== 'all' && !cats.includes(dailyFilter)) {
+      dailyFilter = 'all';
+    }
+    const dailyBar = document.getElementById('dailyFiltersBar');
+    if (dailyBar) {
+      dailyBar.innerHTML =
+        `<button type="button" class="seg-pill ${dailyFilter === 'all' ? 'active' : ''}" data-df="all">Все категории</button>` +
+        cats.map((c) => `<button type="button" class="seg-pill ${dailyFilter === c ? 'active' : ''}" data-df="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+    }
+  }
+
+  function renderStudioProfilePane() {
+    document.querySelectorAll('#profilePresetsGrid .profile-preset-card').forEach((card) => {
+      card.classList.toggle('active', card.getAttribute('data-preset') === PROFILE_CONFIG.id);
+    });
+
+    const cats = PROFILE_CONFIG.categories || [];
+    const catListEl = document.getElementById('customCategoriesList');
+    if (catListEl) {
+      catListEl.innerHTML = cats
+        .map(
+          (c, idx) => `
+          <span class="cat-edit-chip">
+            <span>${escapeHtml(c)}</span>
+            <button type="button" data-rename-cat="${idx}" title="Переименовать">✎</button>
+            ${cats.length > 1 ? `<button type="button" data-remove-cat="${idx}" title="Удалить">×</button>` : ''}
+          </span>`
+        )
+        .join('');
+    }
+
+    const secListEl = document.getElementById('sectionsConfigList');
+    if (secListEl) {
+      const order = [
+        { key: 'daily',  hint: 'Задачи с датой, временем и отправкой в Календарь iPhone' },
+        { key: 'goals',  hint: 'Большие цели и проекты по вашим категориям' },
+        { key: 'habits', hint: 'Трекер привычек с матрицей за 14 дней' },
+        { key: 'books',  hint: 'Полка чтения, фильмов, курсов или игр со статусами' },
+      ];
+      secListEl.innerHTML = order
+        .map(({ key, hint }) => {
+          const s = (PROFILE_CONFIG.sections && PROFILE_CONFIG.sections[key]) || { enabled: true, title: key, mobTitle: key };
+          return `
+            <div class="section-cfg-row">
+              <label style="display:inline-flex; align-items:center; gap:7px; font-weight:600; font-size:12.5px; min-width:110px; cursor:pointer;">
+                <input type="checkbox" id="secEnable_${key}" ${s.enabled !== false ? 'checked' : ''} />
+                <span>${s.enabled !== false ? 'Включён' : 'Скрыт'}</span>
+              </label>
+              <input type="text" id="secTitle_${key}" class="input" style="flex:2 1 160px;" value="${escapeHtml(s.title || '')}" placeholder="Название раздела" />
+              <input type="text" id="secMob_${key}" class="input" style="flex:1 1 95px;" value="${escapeHtml(s.mobTitle || '')}" placeholder="Кнопка меню" />
+              <div style="width:100%; font-size:11px; color:var(--text-muted); padding-left:2px;">${hint}</div>
+            </div>`;
+        })
+        .join('');
+    }
+  }
+
   function setupIosInstallBanner() {
     const ua = navigator.userAgent || '';
     const isIos = /iPhone|iPad|iPod/i.test(ua);
@@ -1296,7 +1798,11 @@
     document.getElementById('mobAvatarBtn')?.addEventListener('click', () => openStudio('themes'));
     document.getElementById('btnMobThemes')?.addEventListener('click', () => openStudio('themes'));
     document.getElementById('topSkinBtn')?.addEventListener('click', () => openStudio('themes'));
+    document.getElementById('btnOpenProfileSide')?.addEventListener('click', () => openStudio('profile'));
     document.getElementById('btnOpenSettingsSide')?.addEventListener('click', () => openStudio('settings'));
+    document.querySelectorAll('[data-open-studio-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => openStudio(btn.getAttribute('data-open-studio-tab')));
+    });
     document.getElementById('btnMobSettings')?.addEventListener('click', () => openStudio('settings'));
     document.getElementById('btnSecurityPill')?.addEventListener('click', () => openStudio('settings'));
 
@@ -1372,11 +1878,13 @@
       const titleEl = document.getElementById('ovDailyInput');
       const timeEl = document.getElementById('ovDailyTime');
       if (!titleEl.value.trim()) return;
+      const catEl = document.getElementById('ovDailyCategory');
       await Storage.addPlan({
         title: titleEl.value,
         list_type: 'dated',
         plan_date: STATE.todayStr,
         remind_time: timeEl.value || '',
+        category: catEl ? catEl.value : '',
       });
       titleEl.value = '';
       timeEl.value = '';
@@ -1393,6 +1901,7 @@
         list_type: 'dated',
         plan_date: document.getElementById('dailyDate').value || STATE.todayStr,
         remind_time: document.getElementById('dailyTime').value || '',
+        category: document.getElementById('dailyCategory')?.value || '',
       });
       document.getElementById('dailyTitle').value = '';
       document.getElementById('dailyTime').value = '';
@@ -1476,6 +1985,15 @@
     });
 
     // Фильтры планов и книг
+    document.getElementById('dailyFiltersBar')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-df]');
+      if (!btn) return;
+      dailyFilter = btn.getAttribute('data-df');
+      document.querySelectorAll('#dailyFiltersBar .seg-pill').forEach((b) => b.classList.toggle('active', b === btn));
+      playUiSound('tap');
+      renderDailyView();
+    });
+
     document.getElementById('goalFiltersBar')?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-gf]');
       if (!btn) return;
@@ -1500,7 +2018,131 @@
     });
     document.getElementById('btnCloseStudio')?.addEventListener('click', closeStudio);
     document.getElementById('stTabBtnThemes')?.addEventListener('click', () => switchStudioTab('themes'));
+    document.getElementById('stTabBtnProfile')?.addEventListener('click', () => switchStudioTab('profile'));
     document.getElementById('stTabBtnSettings')?.addEventListener('click', () => switchStudioTab('settings'));
+
+    // Конструктор тем 3.0
+    document.getElementById('btnOpenThemeBuilder')?.addEventListener('click', () => openThemeBuilder(''));
+    document.getElementById('btnCloseThemeBuilder')?.addEventListener('click', closeThemeBuilder);
+    document.getElementById('btnCancelThemeBuilder')?.addEventListener('click', closeThemeBuilder);
+    document.getElementById('btnSaveThemeBuilder')?.addEventListener('click', saveThemeBuilder);
+    document.getElementById('btnResetDefaultSkins')?.addEventListener('click', resetDefaultThemes);
+    document.getElementById('tbPresetImg')?.addEventListener('change', (e) => {
+      if (e.target.value) {
+        tbTempBgDataUrl = '';
+        document.getElementById('tbBgStatus').textContent = 'Арт из галереи';
+      }
+    });
+    document.getElementById('btnClearTbBg')?.addEventListener('click', () => {
+      tbTempBgDataUrl = '';
+      document.getElementById('tbPresetImg').value = '';
+      document.getElementById('tbBgStatus').textContent = 'Без фона';
+    });
+    document.getElementById('btnClearTbAvatar')?.addEventListener('click', () => {
+      tbTempAvatarDataUrl = '';
+      document.getElementById('btnClearTbAvatar').style.display = 'none';
+      flashStudioToast('● Установлен векторный персонаж');
+    });
+    document.getElementById('tbBgFile')?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      compressImageFile(file, 1280, 0.82, (dataUrl, bestHex) => {
+        tbTempBgDataUrl = dataUrl;
+        document.getElementById('tbPresetImg').value = '';
+        if (bestHex) document.getElementById('tbAccent').value = bestHex;
+        document.getElementById('tbBgStatus').textContent = 'Свой арт ✓';
+        flashStudioToast('● Фон загружен и подобрана палитра');
+      });
+      e.target.value = '';
+    });
+    document.getElementById('tbAvatarFile')?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      compressImageFile(file, 160, 0.86, (dataUrl) => {
+        tbTempAvatarDataUrl = dataUrl;
+        document.getElementById('btnClearTbAvatar').style.display = 'inline-flex';
+        flashStudioToast('● Своя аватарка загружена');
+      });
+      e.target.value = '';
+    });
+
+    // Профили, разделы и категории 3.0
+    document.getElementById('profilePresetsGrid')?.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-preset]');
+      if (!btn) return;
+      const presetId = btn.getAttribute('data-preset');
+      if (!PROFILE_PRESETS[presetId]) return;
+      PROFILE_CONFIG = JSON.parse(JSON.stringify(PROFILE_PRESETS[presetId]));
+      await persistProfileConfig();
+      renderStudioProfilePane();
+      playUiSound('done');
+      flashStudioToast('● Профиль применён');
+    });
+
+    document.getElementById('addCustomCategoryForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('newCategoryInput');
+      const val = (input.value || '').trim();
+      if (!val) return;
+      if (!PROFILE_CONFIG.categories.includes(val)) {
+        PROFILE_CONFIG.categories.push(val);
+        await persistProfileConfig();
+        renderStudioProfilePane();
+        playUiSound('pop');
+        flashStudioToast(`● Категория «${val}» добавлена`);
+      }
+      input.value = '';
+    });
+
+    document.getElementById('customCategoriesList')?.addEventListener('click', async (e) => {
+      const renBtn = e.target.closest('[data-rename-cat]');
+      if (renBtn) {
+        const idx = Number(renBtn.getAttribute('data-rename-cat'));
+        const oldName = PROFILE_CONFIG.categories[idx];
+        if (!oldName) return;
+        const nextName = (global.prompt('Новое название категории:', oldName) || '').trim();
+        if (!nextName || nextName === oldName) return;
+        PROFILE_CONFIG.categories[idx] = nextName;
+        await Storage.renameCategoryInPlans(oldName, nextName);
+        await persistProfileConfig();
+        renderStudioProfilePane();
+        flashStudioToast(`● Переименовано в «${nextName}»`);
+        return;
+      }
+      const delBtn = e.target.closest('[data-remove-cat]');
+      if (delBtn) {
+        if (PROFILE_CONFIG.categories.length <= 1) return;
+        const idx = Number(delBtn.getAttribute('data-remove-cat'));
+        PROFILE_CONFIG.categories.splice(idx, 1);
+        await persistProfileConfig();
+        renderStudioProfilePane();
+        playUiSound('tap');
+        flashStudioToast('● Категория удалена');
+      }
+    });
+
+    document.getElementById('btnSaveSectionsCfg')?.addEventListener('click', async () => {
+      for (const key of ['daily', 'goals', 'habits', 'books']) {
+        const enEl = document.getElementById(`secEnable_${key}`);
+        const tEl = document.getElementById(`secTitle_${key}`);
+        const mEl = document.getElementById(`secMob_${key}`);
+        if (!PROFILE_CONFIG.sections[key]) PROFILE_CONFIG.sections[key] = {};
+        if (enEl) PROFILE_CONFIG.sections[key].enabled = enEl.checked;
+        if (tEl && tEl.value.trim()) {
+          PROFILE_CONFIG.sections[key].title = tEl.value.trim();
+          PROFILE_CONFIG.sections[key].navTitle = tEl.value.trim();
+        }
+        if (mEl && mEl.value.trim()) {
+          PROFILE_CONFIG.sections[key].mobTitle = mEl.value.trim();
+        }
+      }
+      const anyOn = ['daily', 'goals', 'habits', 'books'].some((k) => PROFILE_CONFIG.sections[k]?.enabled !== false);
+      if (!anyOn) PROFILE_CONFIG.sections.daily.enabled = true;
+      await persistProfileConfig();
+      renderStudioProfilePane();
+      playUiSound('done');
+      flashStudioToast('● Разделы сохранены');
+    });
     document.getElementById('skinFilterBar')?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-sc]');
       if (!btn) return;
@@ -1508,6 +2150,18 @@
       renderStudioThemes();
     });
     document.getElementById('skinsGrid')?.addEventListener('click', (e) => {
+      const editBtn = e.target.closest('[data-edit-skin]');
+      if (editBtn) {
+        e.stopPropagation();
+        openThemeBuilder(editBtn.getAttribute('data-edit-skin'));
+        return;
+      }
+      const delBtn = e.target.closest('[data-del-skin]');
+      if (delBtn) {
+        e.stopPropagation();
+        deleteThemeById(delBtn.getAttribute('data-del-skin'));
+        return;
+      }
       const card = e.target.closest('[data-select-skin]');
       if (!card) return;
       UI_PREFS.skinId = card.getAttribute('data-select-skin');
@@ -1650,6 +2304,7 @@
         const item = await Storage.togglePlan(id);
         if (item && item.is_done) {
           playUiSound('done');
+          spawnCompletionSparks(btn);
           triggerCharacterReaction('task_done', item.title);
         } else {
           playUiSound('pop');
@@ -1694,6 +2349,7 @@
         const res = await Storage.toggleHabit(id, STATE.todayStr);
         if (res.status === 'done') {
           playUiSound('done');
+          spawnCompletionSparks(btn);
           triggerCharacterReaction('habit_done');
         } else {
           playUiSound('pop');
@@ -1806,6 +2462,9 @@
 
   // ===== Инициализация приложения =====
   async function boot() {
+    loadCustomThemesLocal();
+    loadProfileConfigLocal();
+    applyProfileToDom();
     loadUiPrefs();
     bindEvents();
     setupParticlesAndParallax();

@@ -182,13 +182,40 @@ function splitBookTitleAuthor(raw = '') {
   return { title: clean || 'Книга', author: '' };
 }
 
+function getConfiguredCategories() {
+  try {
+    const raw = getSetting('profile_config_json', '');
+    if (raw) {
+      const cfg = JSON.parse(raw);
+      if (Array.isArray(cfg.categories) && cfg.categories.length > 0) {
+        return cfg.categories.map((c) => String(typeof c === 'string' ? c : c.name || '').trim()).filter(Boolean);
+      }
+    }
+  } catch {}
+  return ['Учёба', 'Проекты', 'Личное'];
+}
+
 function guessGlobalCategory(text = '') {
   const low = String(text || '').toLowerCase();
-  if (/уч[её]б|экзамен|контрольн|олимпиад|реферат|проект по|школ|урок|матем|алгебр|физик|англ/.test(low)) {
-    return 'Учёба';
+  const cats = getConfiguredCategories();
+  for (const c of cats) {
+    const cl = c.toLowerCase();
+    if (cl && low.includes(cl)) return c;
+  }
+  if (/работ|заказ|клиент|отч[её]т|созвон|встреч|смен|дедлайн|зарплат|офис/.test(low)) {
+    if (cats.includes('Работа')) return 'Работа';
+    if (cats.includes('Проекты')) return 'Проекты';
+  }
+  if (/уч[её]б|экзамен|контрольн|олимпиад|реферат|проект по|школ|урок|матем|алгебр|физик|англ|домашк|дз/.test(low)) {
+    if (cats.includes('Учёба')) return 'Учёба';
+    if (cats.includes('Домашка')) return 'Домашка';
+    if (cats.includes('Работа')) return 'Работа';
   }
   if (/проект|дизайн|портфолио|сайт|бот|приложен|код|фигм/.test(low)) {
-    return 'Проекты';
+    if (cats.includes('Проекты')) return 'Проекты';
+  }
+  if (/спорт|трен|зал|бег|здоров/.test(low) && cats.includes('Спорт')) {
+    return 'Спорт';
   }
   return '';
 }

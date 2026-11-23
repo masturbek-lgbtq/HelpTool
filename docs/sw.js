@@ -1,4 +1,4 @@
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '3.0.0';
 const CORE_CACHE = `helptool-ios-core-${APP_VERSION}`;
 const MEDIA_CACHE = 'helptool-ios-media-v1';
 

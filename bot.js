@@ -153,7 +153,7 @@ function readLocalAppVersion() {
     if (!fs.existsSync(APP_VERSION_FILE)) {
       return { edition: '', schoolEnabled: undefined, commitSha: '', fileShas: {} };
     }
-    const parsed = JSON.parse(fs.readFileSync(APP_VERSION_FILE, 'utf8'));
+    const parsed = JSON.parse(fs.readFileSync(APP_VERSION_FILE, 'utf8').replace(/^\uFEFF/, ''));
     return {
       edition: typeof parsed.edition === 'string' ? parsed.edition.trim() : '',
       schoolEnabled: typeof parsed.schoolEnabled === 'boolean' ? parsed.schoolEnabled : undefined,
@@ -165,7 +165,7 @@ function readLocalAppVersion() {
   }
 }
 
-function isSchoolEnabled() {
+function isDefaultEditionSchoolEnabled() {
   try {
     const ver = readLocalAppVersion();
     if (ver.edition === 'friend' || ver.schoolEnabled === false) return false;
@@ -174,6 +174,19 @@ function isSchoolEnabled() {
   if (process.env.ENABLE_SCHOOL === '1') return true;
   if (process.env.DISABLE_SCHOOL === '1') return false;
   return fs.existsSync(path.join(__dirname, '.git'));
+}
+
+function isSchoolEnabled() {
+  try {
+    const raw = getSetting('profile_config_json', '');
+    if (raw) {
+      const cfg = JSON.parse(raw);
+      if (cfg && cfg.sections && cfg.sections.lessons && typeof cfg.sections.lessons.enabled === 'boolean') {
+        return cfg.sections.lessons.enabled;
+      }
+    }
+  } catch {}
+  return isDefaultEditionSchoolEnabled();
 }
 
 function getWebAccessKey() {
@@ -2361,7 +2374,7 @@ function readJsonBody(req) {
     let raw = '';
     req.on('data', (chunk) => {
       raw += chunk;
-      if (raw.length > 2 * 1024 * 1024) {
+      if (raw.length > 8 * 1024 * 1024) {
         reject(new Error('Body too large'));
       }
     });
@@ -2695,6 +2708,9 @@ function startWebServer() {
             'week_cycle_mode',
             'sound_enabled',
             'fx_enabled',
+            'user_profile',
+            'profile_config_json',
+            'custom_themes_json',
             'bot_token',
             'gemini_api_key',
           ];

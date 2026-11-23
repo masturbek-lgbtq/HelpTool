@@ -1292,7 +1292,7 @@
 		</dict>
 	</array>
 	<key>PayloadDescription</key>
-	<string>Отдельная автономная версия «Личного помощника» для iPhone (без школы, с локальной базой и PIN-защитой).</string>
+	<string>Автономная версия 3.0 «Личного помощника» для iPhone: 25 тем, свои категории и профили, локальная база и PIN-защита.</string>
 	<key>PayloadDisplayName</key>
 	<string>Личный помощник для iPhone</string>
 	<key>PayloadIdentifier</key>

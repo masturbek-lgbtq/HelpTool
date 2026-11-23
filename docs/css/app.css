@@ -1560,6 +1560,222 @@ select.input {
   color: var(--text-muted);
 }
 
+
+/* ================= ВЕРСИЯ 3.0: АНИМАЦИИ, ПРОФИЛИ И КОНСТРУКТОР ТЕМ ================= */
+.chibi-body-breath {
+  transform-origin: 20px 30px;
+  animation: chibiBreath 3.6s ease-in-out infinite;
+}
+
+body.no-fx .chibi-body-breath {
+  animation: none;
+}
+
+@keyframes chibiBreath {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-0.9px) scale(1.018); }
+}
+
+.view-pane.active .card,
+.view-pane.active .form-box {
+  animation: viewCardRise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.view-pane.active .card:nth-child(2) { animation-delay: 0.03s; }
+.view-pane.active .card:nth-child(3) { animation-delay: 0.06s; }
+
+body.no-fx .view-pane.active .card,
+body.no-fx .view-pane.active .form-box {
+  animation: none;
+}
+
+@keyframes viewCardRise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.check-btn,
+.habit-chip,
+.m-cell {
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.check-btn:active,
+.habit-chip:active,
+.m-cell:active {
+  transform: scale(0.86);
+}
+
+.check-btn.checked,
+.m-cell.done {
+  animation: checkPop30 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes checkPop30 {
+  0% { transform: scale(0.8); }
+  60% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+.spark-burst-dot {
+  position: fixed;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 0 8px var(--accent);
+  animation: sparkFly 0.52s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes sparkFly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(0.2);
+  }
+}
+
+.skin-thumb {
+  position: relative;
+}
+
+.skin-card-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+
+.skin-act-btn {
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(15, 15, 22, 0.72);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.skin-act-btn:hover {
+  background: var(--accent);
+}
+
+.theme-builder-box {
+  display: none;
+  border: 1.5px solid var(--accent);
+  border-radius: 14px;
+  padding: 13px;
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+  flex-direction: column;
+  gap: 10px;
+}
+
+.theme-builder-box.open {
+  display: flex;
+}
+
+.profile-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-preset-card {
+  border: 1.5px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 10px 11px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-preset-card.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.profile-preset-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-preset-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.cat-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.cat-edit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cat-edit-chip button {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+}
+
+.section-cfg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--divider);
+  flex-wrap: wrap;
+}
+
+.section-cfg-row:last-child {
+  border-bottom: none;
+}
+
+.section-hidden {
+  display: none !important;
+}
+
 /* Адаптив под iPhone */
 @media (max-width: 860px) {
   .shell {
@@ -1606,6 +1822,9 @@ select.input {
   }
   .skins-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .profile-preset-grid {
+    grid-template-columns: 1fr;
   }
   .studio-backdrop {
     padding: 0;
